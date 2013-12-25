@@ -1,0 +1,146 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#ifndef APSTUDIO_INVOKED
+#include "targetver.h"
+#endif
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAIN DIALOGEX 0, 0, 239, 303
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_ACCEPTFILES
+CAPTION "Xenos"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    PUSHBUTTON      "Inject",IDC_EXECUTE,7,264,225,32,BS_FLAT
+    COMBOBOX        IDC_COMBO_PROC,75,28,121,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Process selection",IDC_STATIC,12,30,56,8
+    PUSHBUTTON      "...",IDC_LOAD_IMG,212,48,20,14
+    LTEXT           "Image",IDC_STATIC,47,51,21,8
+    EDITTEXT        IDC_IMAGE_PATH,75,48,132,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Init routine",IDC_STATIC,32,72,36,8
+    COMBOBOX        IDC_INIT_EXPORT,75,70,157,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Injection type",IDC_STATIC,22,9,46,8
+    COMBOBOX        IDC_OP_TYPE,75,7,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Context thread",IDC_STATIC,17,155,50,8
+    COMBOBOX        IDC_THREADS,76,153,149,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Add loader reference",IDC_LDR_REF,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,203,84,10
+    CONTROL         "Manually resolve imports",IDC_MANUAL_IMP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,223,95,10
+    CONTROL         "Wipe headers",IDC_WIPE_HDR,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,243,60,10
+    GROUPBOX        "Manual map options",IDC_STATIC,7,188,225,71
+    LTEXT           "Init argument",IDC_STATIC,24,93,44,8
+    EDITTEXT        IDC_ARGUMENT,75,90,157,14,ES_AUTOHSCROLL
+    CONTROL         "Ignore TLS",IDC_IGNORE_TLS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,119,203,51,10
+    CONTROL         "No exception support",IDC_NOEXCEPT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,119,223,85,10
+    GROUPBOX        "Native loader options",IDC_STATIC,7,111,225,69
+    CONTROL         "Unlink module",IDC_UNLINK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,129,59,10
+    PUSHBUTTON      "New",IDC_NEW_PROC,200,27,32,15
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 232
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 296
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""targetver.h""\r\n"
+    "#endif\r\n"
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "alien.ico"
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
