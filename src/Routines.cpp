@@ -345,7 +345,8 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
         STARTUPINFOW si = { 0 };
         si.cb = sizeof(si);
 
-        BOOL res = CreateProcessW( _procPath.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi );
+        BOOL res = CreateProcessW( _procPath.c_str(), L"", 
+                                   NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi );
         if (!res)
         {
             MessageBoxW( _hMainDlg, L"Failed to create new process", L"Error", MB_ICONERROR );
@@ -480,6 +481,7 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
             MessageBoxW( _hMainDlg, L"Failed to unlink module", L"Error", MB_ICONERROR );
 
     // MessageBoxW( _hMainDlg, L"Successfully injected", L"Info", MB_ICONINFORMATION );
+    //ResumeThread( pi.hThread );
 
     return ERROR_SUCCESS;
 }

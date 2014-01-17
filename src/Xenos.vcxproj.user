@@ -3,5 +3,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerWorkingDirectory>$(TargetDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>$(TargetPath)</LocalDebuggerCommand>
+    <RemoteDebuggerCommand>C:\RemoteDbg\$(TargetFileName)</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>C:\RemoteDbg\</RemoteDebuggerWorkingDirectory>
+    <DeploymentDirectory>C:\RemoteDbg\</DeploymentDirectory>
+    <RemoteDebuggerDeployDebugCppRuntime>true</RemoteDebuggerDeployDebugCppRuntime>
+    <RemoteDebuggerServerName>192.168.56.101</RemoteDebuggerServerName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <RemoteDebuggerCommand>C:\RemoteDbg\$(TargetFileName)</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>C:\RemoteDbg\</RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerServerName>192.168.56.101</RemoteDebuggerServerName>
+    <DeploymentDirectory>C:\RemoteDbg\</DeploymentDirectory>
+    <RemoteDebuggerDeployDebugCppRuntime>true</RemoteDebuggerDeployDebugCppRuntime>
   </PropertyGroup>
 </Project>

@@ -206,3 +206,14 @@ INT_PTR MainDlg::OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
     return (INT_PTR)TRUE;
 }
+
+INT_PTR MainDlg::OnEjectModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+{
+    if (!_proc.valid())
+    {
+        MessageBoxW( hDlg, L"Please select valid process before unloading modules", L"Error", MB_ICONERROR );
+        return TRUE;
+    }
+
+    return DialogBox( GetModuleHandle( NULL ), MAKEINTRESOURCEW( IDD_MODULES ), _hMainDlg, &ModulesDlg::DlgProcModules );
+}

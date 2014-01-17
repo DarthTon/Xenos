@@ -5,6 +5,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainWnd.cpp" />
     <ClCompile Include="Routines.cpp" />
+    <ClCompile Include="DlgModules.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -13,6 +14,7 @@
     </ClInclude>
     <ClInclude Include="Targetver.h" />
     <ClInclude Include="MainWnd.h" />
+    <ClInclude Include="DlgModules.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resources">

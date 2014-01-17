@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include "resource.h"
+#include "DlgModules.h"
 #include "../../BlackBone/src/BlackBone/Process.h"
 #include "../../BlackBone/src/BlackBone/FileProjection.h"
 #include "../../BlackBone/src/BlackBone/PEParser.h"
@@ -22,7 +23,7 @@ public:
 
     INT_PTR Run();
 
-	static INT_PTR CALLBACK DialogProcWrapper(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+	static INT_PTR CALLBACK DlgProcMain(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
     MainDlg();
@@ -55,10 +56,11 @@ private:
     INT_PTR OnSelChange(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
     INT_PTR OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnNewProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnEjectModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     //////////////////////////////////////////////////////////////////////////////
 private:
+    ModulesDlg          _modulesDlg;
 	HWND                _hMainDlg;
-    HWND                _hPropSheet;
     static mapMsgProc   Messages;
     mapCtrlProc         Events;
     blackbone::Process  _proc;

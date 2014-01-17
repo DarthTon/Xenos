@@ -6,9 +6,9 @@ MainDlg::mapMsgProc MainDlg::Messages;
 
 MainDlg::MainDlg()
     : _hMainDlg( 0 )
-    , _hPropSheet( 0 )
     , _newProcess( false )
     , _proc()
+    , _modulesDlg( _proc )
 {
 }
 
@@ -35,10 +35,12 @@ INT_PTR MainDlg::Run()
     Events[CBN_DROPDOWN]    = &MainDlg::OnDropDown;
     Events[CBN_SELCHANGE]   = &MainDlg::OnSelChange;
 
-    return DialogBox( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDD_MAIN ), NULL, &MainDlg::DialogProcWrapper );
+    Events[ID_TOOLS_EJECTMODULES] = &MainDlg::OnEjectModules;
+
+    return DialogBox( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDD_MAIN ), NULL, &MainDlg::DlgProcMain );
 }
 
-INT_PTR CALLBACK MainDlg::DialogProcWrapper(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK MainDlg::DlgProcMain(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     if (Messages.find( message ) != Messages.end())
         return (Instance().*Messages[message])( hDlg, message, wParam, lParam );

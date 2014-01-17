@@ -183,8 +183,10 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainWnd.cpp" />
     <ClCompile Include="Routines.cpp" />
+    <ClCompile Include="DlgModules.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DlgModules.h" />
     <ClInclude Include="Targetver.h" />
     <ClInclude Include="MainWnd.h" />
     <ClInclude Include="Resource.h" />
