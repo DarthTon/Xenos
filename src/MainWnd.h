@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "resource.h"
 #include "DlgModules.h"
+#include "ConfigMgr.h"
 #include "../../BlackBone/src/BlackBone/Process.h"
 #include "../../BlackBone/src/BlackBone/FileProjection.h"
 #include "../../BlackBone/src/BlackBone/PEParser.h"
@@ -14,6 +15,12 @@ class MainDlg
 
     typedef std::map<UINT, PDLGPROC> mapMsgProc;
     typedef std::map<WORD, PDLGPROC> mapCtrlProc;
+
+    enum MapMode
+    {
+        Normal = 0,
+        Manual = 1
+    };
 
 public:
 	
@@ -34,7 +41,12 @@ private:
     DWORD AttachToProcess(DWORD pid);
     DWORD FillProcessList();
     DWORD FillThreads();
-    DWORD LoadImage( const wchar_t* path );
+    DWORD SetActiveProcess( bool createNew, const wchar_t* path, DWORD pid = 0xFFFFFFFF );
+    DWORD MmapFlags();
+    DWORD MmapFlags( DWORD flags );
+    DWORD SetMapMode( MapMode mode );
+
+    DWORD LoadImageFile( const wchar_t* path );
     DWORD ValidateImage( const wchar_t* path, const char* init );
     DWORD ValidateArch( const wchar_t* path, const blackbone::Wow64Barrier& barrier, DWORD thdId, bool isManual );
     DWORD ValidateInit( const char* init );
@@ -64,6 +76,7 @@ private:
     static mapMsgProc   Messages;
     mapCtrlProc         Events;
     blackbone::Process  _proc;
+    ConfigMgr           _config;
 
     blackbone::FileProjection _file;
     blackbone::pe::PEParser   _imagePE;

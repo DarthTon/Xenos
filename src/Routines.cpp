@@ -15,9 +15,10 @@ DWORD MainDlg::AttachToProcess( DWORD pid )
     {
         std::wstring errmsg = L"Can not attach to process.\n" + blackbone::Utils::GetErrorDescription( status );
         MessageBoxW( _hMainDlg, errmsg.c_str(), L"Error", MB_ICONERROR );
+        return status;
     }
 
-    return 0;
+    return ERROR_SUCCESS;
 }
 
 /// <summary>
@@ -91,9 +92,57 @@ DWORD MainDlg::FillThreads()
 /// <summary>
 /// Load selected image and do some validation
 /// </summary>
+DWORD MainDlg::SetActiveProcess( bool createNew, const wchar_t* path, DWORD pid /*= 0xFFFFFFFF*/ )
+{
+    HWND hCombo = GetDlgItem( _hMainDlg, IDC_COMBO_PROC );
+
+    if (createNew)
+    {
+        std::wstring procName = blackbone::Utils::StripPath( path ) + L" (New process)";     
+
+        // Update process list
+        auto idx = ComboBox_AddString( hCombo, procName.c_str() );
+        ComboBox_SetItemData( hCombo, idx, -1 );
+        ComboBox_SetCurSel( hCombo, idx );
+
+        // Enable command line options field
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_CMDLINE ), TRUE );
+
+        _newProcess = true;
+        _procPath = path;
+    }
+    else if (pid != 0xFFFFFFFF && AttachToProcess( pid ) == ERROR_SUCCESS)
+    {
+        FillThreads();
+
+        _newProcess = false;
+
+        if (path != nullptr)
+        {
+            std::wstring procName = std::wstring( path ) + L" (" + std::to_wstring( _proc.pid() ) + L")";
+            _procPath = path;
+
+            auto idx = ComboBox_AddString( hCombo, procName.c_str() );
+            ComboBox_SetItemData( hCombo, idx, -1 );
+            ComboBox_SetCurSel( hCombo, idx );
+        }
+        else
+            _procPath = _proc.modules().GetMainModule()->name;
+
+        // Disable command line option field
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_CMDLINE ), FALSE );
+    }
+
+    return ERROR_SUCCESS;
+}
+
+
+/// <summary>
+/// Load selected image and do some validation
+/// </summary>
 /// <param name="path">Full qualified image path</param>
 /// <returns>Error code</returns>
-DWORD MainDlg::LoadImage( const wchar_t* path )
+DWORD MainDlg::LoadImageFile( const wchar_t* path )
 {
     HWND hCombo = GetDlgItem( _hMainDlg, IDC_INIT_EXPORT );
 
@@ -103,9 +152,10 @@ DWORD MainDlg::LoadImage( const wchar_t* path )
     if (_file.Project( path ) == nullptr || _imagePE.Parse( _file.base(), _file.isPlainData() ) == false)
     {
         DWORD err = GetLastError();
+        std::wstring errstr = std::wstring( L"File \"" ) + path + L"\" is not a valid PE image";
 
         Edit_SetText( GetDlgItem( _hMainDlg, IDC_IMAGE_PATH ), L"" );
-        MessageBoxW( _hMainDlg, L"Loaded image is invalid", L"Error", MB_ICONERROR );
+        MessageBoxW( _hMainDlg, errstr.c_str(), L"Error", MB_ICONERROR );
 
         _file.Release();
         return err;
@@ -138,6 +188,84 @@ DWORD MainDlg::LoadImage( const wchar_t* path )
 
     return 0;
 }
+
+/// <summary>
+/// Get manual map flags from interface
+/// </summary>
+/// <returns>Flags</returns>
+DWORD MainDlg::MmapFlags()
+{
+    DWORD flags = 0;
+
+    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ) ))
+        flags |= blackbone::ManualImports;
+
+    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_LDR_REF ) ))
+        flags |= blackbone::CreateLdrRef;
+
+    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ) ))
+        flags |= blackbone::WipeHeader;
+
+    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ) ))
+        flags |= blackbone::NoTLS;
+
+    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ) ))
+        flags |= blackbone::NoExceptions;
+
+    return flags;
+}
+
+/// <summary>
+/// Update interface manual map flags
+/// </summary>
+/// <param name="flags">Flags</param>
+/// <returns>Flags</returns>
+DWORD MainDlg::MmapFlags( DWORD flags )
+{
+    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ),   flags & blackbone::ManualImports );
+    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_LDR_REF ),      flags & blackbone::CreateLdrRef );
+    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ),     flags & blackbone::WipeHeader );
+    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ),   flags & blackbone::NoTLS );
+    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ),     flags & blackbone::NoExceptions );
+
+    return flags;
+}
+
+
+/// <summary>
+/// Set injection method
+/// </summary>
+/// <param name="mode">Injection mode</param>
+/// <returns>Error code</returns>
+DWORD MainDlg::SetMapMode( MapMode mode )
+{
+    if (mode == Normal)
+    {
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_THREADS ), TRUE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_UNLINK ), TRUE );
+
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ), FALSE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_LDR_REF ), FALSE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ), FALSE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ), FALSE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ), FALSE );
+    }
+    else if( mode == Manual )
+    {
+        ComboBox_SetCurSel( GetDlgItem( _hMainDlg, IDC_THREADS ), 0 );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_THREADS ), FALSE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_UNLINK ), FALSE );
+
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ), TRUE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_LDR_REF ), TRUE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ), TRUE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ), TRUE );
+        EnableWindow( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ), TRUE );
+    }
+
+    return ERROR_SUCCESS;
+}
+
 
 /// <summary>
 /// Validate all parameters
@@ -286,11 +414,7 @@ DWORD MainDlg::ValidateImage( const wchar_t* path, const char* init )
 
     bool isManual = (ComboBox_GetCurSel( GetDlgItem( _hMainDlg, IDC_OP_TYPE ) ) == 1);
 
-    status = ValidateArch( path, barrier, thdId, isManual );
-    if (status != ERROR_SUCCESS)
-        return status;
-
-    return ValidateInit( init );
+    return ValidateArch( path, barrier, thdId, isManual );
 }
 
 /// <summary>
@@ -334,10 +458,16 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
     blackbone::Thread *pThread = nullptr;
     const blackbone::ModuleData* mod = nullptr;
     PROCESS_INFORMATION pi = { 0 };
-
+    wchar_t cmdline[256] = { 0 };
     HWND hCombo = GetDlgItem( _hMainDlg, IDC_THREADS );
     DWORD thdId = (DWORD)ComboBox_GetItemData( hCombo, ComboBox_GetCurSel( hCombo ) );
     bool bManual = ComboBox_GetCurSel( GetDlgItem( _hMainDlg, IDC_OP_TYPE ) ) == 1;
+    
+    GetDlgItemTextW( _hMainDlg, IDC_CMDLINE, cmdline, ARRAYSIZE( cmdline ) );  
+
+    // Check export
+    if (ValidateInit( init.c_str() ) != STATUS_SUCCESS)
+        return ERROR_CANCELLED;
 
     // Create new process
     if (_newProcess)
@@ -345,9 +475,7 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
         STARTUPINFOW si = { 0 };
         si.cb = sizeof(si);
 
-        BOOL res = CreateProcessW( _procPath.c_str(), L"", 
-                                   NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi );
-        if (!res)
+        if (!CreateProcessW( _procPath.c_str(), cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ))
         {
             MessageBoxW( _hMainDlg, L"Failed to create new process", L"Error", MB_ICONERROR );
             return GetLastError();
@@ -361,6 +489,7 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
         AttachToProcess( pi.dwProcessId );
     }
 
+    // Final sanity check
     if (ValidateImage( path.c_str(), init.c_str() ) != ERROR_SUCCESS)
     {
         if (_newProcess)
@@ -368,8 +497,9 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
 
         return ERROR_CANCELLED;
     }
-
-    if (!bManual)
+        
+    // Normal inject
+    if (bManual == false)
     {
         if (_imagePE.IsPureManaged())
         {
@@ -400,7 +530,7 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
             // Load 
             auto pLoadLib = _proc.modules().GetExport( _proc.modules().GetModule( L"kernel32.dll" ), "LoadLibraryW" ).procAddress;
             blackbone::RemoteFunction<decltype(&LoadLibraryW)> pfn( _proc, (decltype(&LoadLibraryW))pLoadLib, path.c_str() );
-            blackbone::RemoteFunction<decltype(&LoadLibraryW)>::ReturnType junk = 0;
+            decltype(pfn)::ReturnType junk = 0;
             pfn.Call( junk, pThread );
 
             mod = _proc.modules().GetModule( path );
@@ -412,25 +542,7 @@ DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring a
     else
     {
         thdId = 0;
-        int flags = blackbone::RebaseProcess | blackbone::NoDelayLoad;
-
-        //
-        // Mapping flags
-        //
-        if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ) ))
-            flags |= blackbone::ManualImports;
-
-        if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_LDR_REF ) ))
-            flags |= blackbone::CreateLdrRef;
-
-        if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ) ))
-            flags |= blackbone::WipeHeader;
-
-        if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ) ))
-            flags |= blackbone::NoTLS;
-
-        if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ) ))
-            flags |= blackbone::NoExceptions;
+        int flags = blackbone::RebaseProcess | blackbone::NoDelayLoad | MmapFlags();
 
         mod = _proc.mmap().MapImage( path, flags );
     }

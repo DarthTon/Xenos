@@ -24,13 +24,14 @@
 #define IDC_ARGUMENT                    1011
 #define IDC_IGNORE_TLS                  1012
 #define IDC_NOEXCEPT                    1013
-#define IDC_BUTTON1                     1013
 #define IDC_BUTTON_UNLOAD               1013
 #define IDC_UNLINK                      1014
 #define IDC_BUTTON_CLOSE                1014
 #define IDC_LOAD_IMG2                   1015
 #define IDC_NEW_PROC                    1015
 #define IDC_LIST_MODULES                1015
+#define IDC_IMAGE_PATH2                 1016
+#define IDC_CMDLINE                     1016
 #define ID_TOOLS_EJECTMODULES           32772
 #define IDC_STATIC                      -1
 
