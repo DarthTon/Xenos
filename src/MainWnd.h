@@ -45,6 +45,7 @@ private:
     DWORD MmapFlags();
     DWORD MmapFlags( DWORD flags );
     DWORD SetMapMode( MapMode mode );
+    void  SetRandomTitle();
 
     DWORD LoadImageFile( const wchar_t* path );
     DWORD ValidateImage( const wchar_t* path, const char* init );

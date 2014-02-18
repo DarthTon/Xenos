@@ -2,6 +2,8 @@
 
 #include "../../BlackBone/src/BlackBone/RemoteFunction.hpp"
 
+#include <random>
+
 /// <summary>
 /// Attach to selected process
 /// </summary>
@@ -266,6 +268,23 @@ DWORD MainDlg::SetMapMode( MapMode mode )
     return ERROR_SUCCESS;
 }
 
+
+/// <summary>
+/// Randomize window title
+/// </summary>
+void MainDlg::SetRandomTitle()
+{
+    std::random_device rd;
+    std::uniform_int<uint32_t> rsym( 32, 127 );
+    std::uniform_int<uint32_t> rlen( 10, 20 );
+    uint8_t len = rlen( rd );
+    std::string title;
+
+    for (uint8_t i = 0; i < len; i++)
+        title.push_back( rsym( rd ) );
+
+    SetWindowTextA( _hMainDlg, title.c_str() );
+}
 
 /// <summary>
 /// Validate all parameters

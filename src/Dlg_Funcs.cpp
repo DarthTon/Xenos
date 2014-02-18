@@ -7,9 +7,10 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     _hMainDlg = hDlg;
 
     // Set dialog title
-#ifdef _M_AMD64
+    SetRandomTitle();
+/*#ifdef _M_AMD64
     SetWindowText( hDlg, L"Xenos64" );
-#endif
+#endif*/
 
     // Fill inject methods
     HWND hOpTypeList = GetDlgItem( hDlg, IDC_OP_TYPE );
@@ -65,7 +66,7 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
         if (!cfg.initRoutine.empty())
             SetDlgItemTextW( _hMainDlg, IDC_INIT_EXPORT, cfg.initRoutine.c_str() );
 
-        if (!cfg.unlink)
+        if (cfg.unlink)
             Button_SetCheck( GetDlgItem( _hMainDlg, IDC_UNLINK ), TRUE );
 
         if (cfg.manualMap)
@@ -117,7 +118,7 @@ INT_PTR MainDlg::OnClose( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam 
     cfg.manualMap = (ComboBox_GetCurSel( GetDlgItem( hDlg, IDC_OP_TYPE ) ) == 1);
     cfg.threadHijack = (thdId != 0 && thdId != 0xFFFFFFFF);
     cfg.manualMapFlags = MmapFlags();
-    cfg.unlink = Button_GetCheck( GetDlgItem( _hMainDlg, IDC_UNLINK ) ) != 0 ? true : false;
+    cfg.unlink = Button_GetCheck( GetDlgItem( _hMainDlg, IDC_UNLINK ) ) == 0 ? false : true;
 
     _config.Save( cfg );
 
