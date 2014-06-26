@@ -1,5 +1,5 @@
 #include "ConfigMgr.h"
-#include "../../BlackBone/src/BlackBone/Utils.h"
+#include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
 #define CONFIG_FILE L"\\XenosConfig.xml"
 

@@ -2,10 +2,10 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#include "../../BlackBone/src/BlackBone/Process.h"
-#include "../../BlackBone/src/BlackBone/FileProjection.h"
-#include "../../BlackBone/src/BlackBone/PEParser.h"
-#include "../../BlackBone/src/BlackBone/Utils.h"
+#include "../../BlackBone/src/BlackBone/Process/Process.h"
+#include "../../BlackBone/src/BlackBone/PE/FileProjection.h"
+#include "../../BlackBone/src/BlackBone/PE/PEParser.h"
+#include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
 class ModulesDlg
 {

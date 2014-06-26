@@ -4,10 +4,11 @@
 #include "resource.h"
 #include "DlgModules.h"
 #include "ConfigMgr.h"
-#include "../../BlackBone/src/BlackBone/Process.h"
-#include "../../BlackBone/src/BlackBone/FileProjection.h"
-#include "../../BlackBone/src/BlackBone/PEParser.h"
-#include "../../BlackBone/src/BlackBone/Utils.h"
+#include "../../BlackBone/src/BlackBone/Config.h"
+#include "../../BlackBone/src/BlackBone/Process/Process.h"
+#include "../../BlackBone/src/BlackBone/PE/FileProjection.h"
+#include "../../BlackBone/src/BlackBone/PE/PEParser.h"
+#include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
 class MainDlg
 {
@@ -54,7 +55,7 @@ private:
 
     DWORD DoInject( const wchar_t* path, const char* init, const wchar_t* arg );
     static DWORD CALLBACK InjectWrap( LPVOID lpPram );
-    DWORD InjectWorker( std::wstring path, std::string init, std::wstring arg );
+    DWORD InjectWorker( const std::wstring& path, std::string init, std::wstring arg );
 
 //////////////////////////////////////////////////////////////////////////////////
     INT_PTR OnInit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);      //
@@ -87,5 +88,4 @@ private:
     std::wstring _path;
     std::string  _init;
     std::wstring _arg;
-
 };

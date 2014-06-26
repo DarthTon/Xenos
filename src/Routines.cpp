@@ -1,6 +1,6 @@
 #include "MainWnd.h"
 
-#include "../../BlackBone/src/BlackBone/RemoteFunction.hpp"
+#include "../../BlackBone/src/BlackBone/Process/RPC/RemoteFunction.hpp"
 
 #include <random>
 
@@ -472,7 +472,7 @@ DWORD MainDlg::InjectWrap( LPVOID lpPram )
 /// <param name="init">Initizliation routine/param>
 /// <param name="arg">Initizliation routine argument</param>
 /// <returns>Error code</returns>
-DWORD MainDlg::InjectWorker( std::wstring path, std::string init, std::wstring arg )
+DWORD MainDlg::InjectWorker( const std::wstring& path, std::string init, std::wstring arg )
 {
     blackbone::Thread *pThread = nullptr;
     const blackbone::ModuleData* mod = nullptr;

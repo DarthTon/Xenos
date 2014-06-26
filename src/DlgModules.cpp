@@ -170,7 +170,7 @@ void ModulesDlg::RefrestList( )
 
         lvi.pszText = (LPWSTR)mod.second.name.c_str();
         lvi.cchTextMax = static_cast<int>(mod.second.name.length()) + 1;
-        lvi.lParam = mod.second.baseAddress;
+        lvi.lParam = static_cast<LPARAM>(mod.second.baseAddress);
 
         wsprintf( address, L"0x%08I64x", mod.second.baseAddress );
 
