@@ -1,27 +1,96 @@
 #include "MainWnd.h"
 
-#include "../../BlackBone/src/BlackBone/Process/RPC/RemoteFunction.hpp"
-
-#include <random>
 
 /// <summary>
-/// Attach to selected process
+/// Load configuration from file
 /// </summary>
-/// <param name="pid">The pid.</param>
 /// <returns>Error code</returns>
-DWORD MainDlg::AttachToProcess( DWORD pid )
+DWORD MainDlg::LoadConfig()
 {
-    NTSTATUS status = _proc.Attach( pid );
-
-    if (status != STATUS_SUCCESS)
+    ConfigMgr::ConfigData cfg;
+    if (_config.Load( cfg ))
     {
-        std::wstring errmsg = L"Can not attach to process.\n" + blackbone::Utils::GetErrorDescription( status );
-        MessageBoxW( _hMainDlg, errmsg.c_str(), L"Error", MB_ICONERROR );
-        return status;
+        // Image
+        if (!cfg.imagePath.empty())
+        {
+            std::list<std::string> exportNames;
+
+            if (_core.LoadImageFile( cfg.imagePath, exportNames ) == ERROR_SUCCESS)
+            {
+                _imagePath.text( cfg.imagePath );
+
+                _initFuncList.reset();
+                for (auto& name : exportNames)
+                    _initFuncList.Add( name );
+            }
+        }
+
+        // Process
+        if (!cfg.procName.empty())
+        {
+            if (cfg.newProcess)
+            {
+                SetActiveProcess( 0, cfg.procName );
+            }
+            else
+            {
+                std::vector<DWORD> pidList;
+                blackbone::Process::EnumByName( cfg.procName, pidList );
+
+                if (!pidList.empty())
+                {
+                    auto idx = _procList.Add( cfg.procName + L" (" + std::to_wstring( pidList.front() ) + L")", pidList.front() );
+                    _procList.selection( idx );
+
+                    SetActiveProcess( pidList.front(), cfg.procName );
+                }
+            }
+        }
+
+        // Options
+        _procCmdLine.text( cfg.procCmdLine );
+        _initArg.text( cfg.initArgs );
+        _initFuncList.text( cfg.initRoutine );
+
+        _unlink.checked( cfg.unlink );
+
+        // Injection type
+        _injectionType.selection( cfg.injectMode );
+
+        SetMapMode( (MapMode)cfg.injectMode );
+        MmapFlags( (blackbone::eLoadFlags)cfg.manualMapFlags );
     }
 
     return ERROR_SUCCESS;
 }
+
+
+/// <summary>
+/// Save Configuration.
+/// </summary>
+/// <returns>Error code</returns>
+DWORD MainDlg::SaveConfig()
+{
+    ConfigMgr::ConfigData cfg;
+
+    auto thdId = _threadList.itemData( _threadList.selection() );
+
+    cfg.newProcess     = _procList.itemData( _procList.selection() ) == 0;
+    cfg.procName       = _processPath;
+    cfg.imagePath      = _imagePath.text();
+    cfg.procCmdLine    = _procCmdLine.text();
+    cfg.initRoutine    = _initFuncList.selectedText();
+    cfg.initArgs       = _initArg.text();
+    cfg.injectMode     = _injectionType.selection();
+    cfg.threadHijack   = (thdId != 0 && thdId != 0xFFFFFFFF);
+    cfg.manualMapFlags = MmapFlags();
+    cfg.unlink         = _unlink.checked();
+
+    _config.Save( cfg );
+
+    return ERROR_SUCCESS;
+}
+
 
 /// <summary>
 /// Enumerate processes
@@ -32,9 +101,7 @@ DWORD MainDlg::FillProcessList()
     PROCESSENTRY32W pe32 = { 0 };
     pe32.dwSize = sizeof(pe32);
 
-    HWND hCombo = GetDlgItem( _hMainDlg, IDC_COMBO_PROC );
-
-    ComboBox_ResetContent( hCombo );
+    _procList.reset( );
 
     HANDLE hSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
     if (hSnap == NULL)
@@ -45,94 +112,95 @@ DWORD MainDlg::FillProcessList()
         wchar_t text[255] = { 0 };
         swprintf_s( text, L"%ls (%d)", pe32.szExeFile, pe32.th32ProcessID );
 
-        int idx = ComboBox_AddString( hCombo, text );
-        ComboBox_SetItemData( hCombo, idx, pe32.th32ProcessID );
+        _procList.Add( text, pe32.th32ProcessID );
     }
 
     CloseHandle( hSnap );
-
-    return 0;
+    return ERROR_SUCCESS;
 }
 
 /// <summary>
 /// Retrieve process threads
 /// </summary>
+/// <param name="pid">Process ID</param>
 /// <returns>Error code</returns>
-DWORD MainDlg::FillThreads()
+DWORD MainDlg::FillThreads( DWORD pid )
 {
-    HWND hCombo = GetDlgItem( _hMainDlg, IDC_THREADS );
-    int idx = 0;
+    THREADENTRY32 te32 = { 0 };
+    te32.dwSize = sizeof( te32 );
+    uint64_t thdTime = 0xFFFFFFFFFFFFFFFF;
+    DWORD mainThdId = 0;
+    int mainThdIdx = 0;
 
-    ComboBox_ResetContent( hCombo );
+    _threadList.reset();
 
-    auto tMain = _proc.threads().getMain();
-    if (!tMain)
-        return ERROR_NOT_FOUND;
+    HANDLE hSnap = CreateToolhelp32Snapshot( TH32CS_SNAPTHREAD, 0 );
+    if (hSnap == NULL)
+        return GetLastError();
 
-    // Fake 'New thread'
-    idx = ComboBox_AddString( hCombo, L"New thread" );
-    ComboBox_SetItemData( hCombo, idx, 0 );
-    ComboBox_SetCurSel( hCombo, idx );
+    _threadList.Add( L"New Thread" );
 
-    for (auto& thd : _proc.threads().getAll( true ))
+    for (BOOL res = Thread32First( hSnap, &te32 ); res; res = Thread32Next( hSnap, &te32 ))
     {
-        wchar_t text[255] = { 0 };
+        if (te32.th32OwnerProcessID != pid)
+            continue;
 
-        if (thd == *tMain)
-            swprintf_s( text, L"Thread %d (Main)", thd.id() );
-        else
-            swprintf_s( text, L"Thread %d", thd.id() );
+        int idx = _threadList.Add( std::to_wstring( te32.th32ThreadID ), te32.th32ThreadID );
 
-        idx = ComboBox_AddString( hCombo, text );
-        ComboBox_SetItemData( hCombo, idx, thd.id() );
+        FILETIME times[4] = { 0 };
+        /*HANDLE hThd = OpenThread( THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID );
+
+        if (hThd)
+        {
+            GetThreadTimes( hThd, &times[0], &times[1], &times[2], &times[3] );
+            CloseHandle( hThd );
+
+            auto time = ((static_cast<uint64_t>(times[2].dwHighDateTime) << 32) | times[2].dwLowDateTime)
+                + ((static_cast<uint64_t>(times[3].dwHighDateTime) << 32) | times[3].dwLowDateTime);
+
+            if (time < thdTime)
+            {
+                thdTime = time;
+                mainThdId = te32.th32ThreadID;
+                mainThdIdx = idx;
+            }
+        }*/
     }
 
+    if (mainThdIdx != 0)
+        _threadList.modifyItem( mainThdIdx, std::to_wstring( mainThdId ) + L" (Main)" );
 
-    return 0;
+    _threadList.selection( 0 );
+
+    return ERROR_SUCCESS;
 }
 
 /// <summary>
-/// Load selected image and do some validation
+/// Set current process
 /// </summary>
-DWORD MainDlg::SetActiveProcess( bool createNew, const wchar_t* path, DWORD pid /*= 0xFFFFFFFF*/ )
+/// <param name="pid">Target PID</param>
+/// <param name="path">Process path.</param>
+/// <returns>Error code</returns>
+DWORD MainDlg::SetActiveProcess( DWORD pid, const std::wstring& path )
 {
-    HWND hCombo = GetDlgItem( _hMainDlg, IDC_COMBO_PROC );
+    _processPath = path;
 
-    if (createNew)
+    if (pid == 0)
     {
-        std::wstring procName = blackbone::Utils::StripPath( path ) + L" (New process)";     
-
         // Update process list
-        auto idx = ComboBox_AddString( hCombo, procName.c_str() );
-        ComboBox_SetItemData( hCombo, idx, -1 );
-        ComboBox_SetCurSel( hCombo, idx );
+        _procList.reset();
+        _procList.Add( blackbone::Utils::StripPath( path ) + L" (New process)", 0 );
+        _procList.selection( 0 );
 
         // Enable command line options field
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_CMDLINE ), TRUE );
-
-        _newProcess = true;
-        _procPath = path;
+        _procCmdLine.enable();
     }
-    else if (pid != 0xFFFFFFFF && AttachToProcess( pid ) == ERROR_SUCCESS)
+    else
     {
-        FillThreads();
-
-        _newProcess = false;
-
-        if (path != nullptr)
-        {
-            std::wstring procName = std::wstring( path ) + L" (" + std::to_wstring( _proc.pid() ) + L")";
-            _procPath = path;
-
-            auto idx = ComboBox_AddString( hCombo, procName.c_str() );
-            ComboBox_SetItemData( hCombo, idx, -1 );
-            ComboBox_SetCurSel( hCombo, idx );
-        }
-        else
-            _procPath = _proc.modules().GetMainModule()->name;
+        FillThreads( pid );
 
         // Disable command line option field
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_CMDLINE ), FALSE );
+        _procCmdLine.disable();
     }
 
     return ERROR_SUCCESS;
@@ -140,78 +208,26 @@ DWORD MainDlg::SetActiveProcess( bool createNew, const wchar_t* path, DWORD pid 
 
 
 /// <summary>
-/// Load selected image and do some validation
-/// </summary>
-/// <param name="path">Full qualified image path</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::LoadImageFile( const wchar_t* path )
-{
-    HWND hCombo = GetDlgItem( _hMainDlg, IDC_INIT_EXPORT );
-
-    ComboBox_ResetContent( hCombo );
-
-    // Check if image is a PE file
-    if (_file.Project( path ) == nullptr || _imagePE.Parse( _file.base(), _file.isPlainData() ) == false)
-    {
-        DWORD err = GetLastError();
-        std::wstring errstr = std::wstring( L"File \"" ) + path + L"\" is not a valid PE image";
-
-        Edit_SetText( GetDlgItem( _hMainDlg, IDC_IMAGE_PATH ), L"" );
-        MessageBoxW( _hMainDlg, errstr.c_str(), L"Error", MB_ICONERROR );
-
-        _file.Release();
-        return err;
-    }
-
-    // In case of pure IL, list all methods
-    if (_imagePE.IsPureManaged( ))
-    {
-        if (_imagePE.net().Init( path ))
-        {
-            blackbone::ImageNET::mapMethodRVA methods;
-            _imagePE.net().Parse( methods );
-
-            for (auto& entry : methods)
-            {
-                std::wstring name = entry.first.first + L"." + entry.first.second;
-                SendMessageW( hCombo, CB_ADDSTRING, 0L, (LPARAM)name.c_str() );
-            }
-        }
-    }
-    // Simple exports otherwise
-    else
-    {
-        std::list<std::string> names;
-        _imagePE.GetExportNames( names );
-
-        for (auto& name : names)
-            SendMessageA( hCombo, CB_ADDSTRING, 0L, (LPARAM)name.c_str() );
-    }
-
-    return 0;
-}
-
-/// <summary>
 /// Get manual map flags from interface
 /// </summary>
 /// <returns>Flags</returns>
-DWORD MainDlg::MmapFlags()
+blackbone::eLoadFlags MainDlg::MmapFlags()
 {
-    DWORD flags = 0;
+    blackbone::eLoadFlags flags = blackbone::NoFlags;
 
-    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ) ))
+    if (_mmapOptions.manualInmport)
         flags |= blackbone::ManualImports;
 
-    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_LDR_REF ) ))
+    if (_mmapOptions.addLdrRef)
         flags |= blackbone::CreateLdrRef;
 
-    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ) ))
+    if (_mmapOptions.wipeHeader)
         flags |= blackbone::WipeHeader;
 
-    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ) ))
+    if (_mmapOptions.noTls)
         flags |= blackbone::NoTLS;
 
-    if (Button_GetCheck( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ) ))
+    if (_mmapOptions.noExceptions)
         flags |= blackbone::NoExceptions;
 
     return flags;
@@ -222,13 +238,13 @@ DWORD MainDlg::MmapFlags()
 /// </summary>
 /// <param name="flags">Flags</param>
 /// <returns>Flags</returns>
-DWORD MainDlg::MmapFlags( DWORD flags )
+DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
 {
-    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ),   flags & blackbone::ManualImports );
-    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_LDR_REF ),      flags & blackbone::CreateLdrRef );
-    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ),     flags & blackbone::WipeHeader );
-    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ),   flags & blackbone::NoTLS );
-    Button_SetCheck( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ),     flags & blackbone::NoExceptions );
+    _mmapOptions.manualInmport.checked( flags & blackbone::ManualImports ? true : false );
+    _mmapOptions.addLdrRef.checked( flags & blackbone::CreateLdrRef ? true : false );
+    _mmapOptions.wipeHeader.checked( flags & blackbone::WipeHeader ? true : false );
+    _mmapOptions.noTls.checked( flags & blackbone::NoTLS ? true : false );
+    _mmapOptions.noExceptions.checked( flags & blackbone::NoExceptions ? true : false );
 
     return flags;
 }
@@ -241,378 +257,60 @@ DWORD MainDlg::MmapFlags( DWORD flags )
 /// <returns>Error code</returns>
 DWORD MainDlg::SetMapMode( MapMode mode )
 {
-    if (mode == Normal)
+    switch (mode)
     {
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_THREADS ), TRUE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_UNLINK ), TRUE );
+        case Normal:
+            _threadList.enable();
+            _unlink.enable();
 
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ), FALSE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_LDR_REF ), FALSE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ), FALSE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ), FALSE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ), FALSE );
-    }
-    else if( mode == Manual )
-    {
-        ComboBox_SetCurSel( GetDlgItem( _hMainDlg, IDC_THREADS ), 0 );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_THREADS ), FALSE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_UNLINK ), FALSE );
+            _initFuncList.enable();
+            _initArg.enable();
 
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ), TRUE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_LDR_REF ), TRUE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ), TRUE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ), TRUE );
-        EnableWindow( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ), TRUE );
-    }
+            _mmapOptions.manualInmport.disable();
+            _mmapOptions.addLdrRef.disable();
+            _mmapOptions.wipeHeader.disable();
+            _mmapOptions.noTls.disable();
+            _mmapOptions.noExceptions.disable();
+            break;
 
-    return ERROR_SUCCESS;
-}
+        case Manual:
+            _threadList.selection( 0 );
+            _threadList.disable();
+            _unlink.disable();
 
+            _initFuncList.enable();
+            _initArg.enable();
 
-/// <summary>
-/// Randomize window title
-/// </summary>
-void MainDlg::SetRandomTitle()
-{
-    std::random_device rd;
-    std::uniform_int<uint32_t> rsym( 32, 127 );
-    std::uniform_int<uint32_t> rlen( 10, 20 );
-    uint8_t len = rlen( rd );
-    std::string title;
+            _mmapOptions.manualInmport.enable();
+            _mmapOptions.addLdrRef.enable();
+            _mmapOptions.wipeHeader.enable();
+            _mmapOptions.noTls.enable();
+            _mmapOptions.noExceptions.enable();         
+            break;
 
-    for (uint8_t i = 0; i < len; i++)
-        title.push_back( rsym( rd ) );
+        case Kernel_Thread:
+        case Kernel_APC:
+            _threadList.selection( 0 );
+            _threadList.disable();
+            _unlink.disable();
 
-    SetWindowTextA( _hMainDlg, title.c_str() );
-}
+            _initFuncList.selectedText( L"" );
+            _initFuncList.disable();
+            _initArg.reset();
+            _initArg.disable();
 
-/// <summary>
-/// Validate all parameters
-/// </summary>
-/// <param name="path">Image path</param>
-/// <param name="barrier">Process WOW64 info</param>
-/// <param name="thdId">Context thread id.</param>
-/// <param name="isManual">true if image is itended to be manually mapped</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::ValidateArch( const wchar_t* path, const blackbone::Wow64Barrier &barrier, DWORD thdId, bool isManual )
-{
-    // No process selected
-    if (!_proc.valid())
-    {
-        MessageBoxW( _hMainDlg, L"Please select valid process before injection", L"Error", MB_ICONERROR );
-        return ERROR_INVALID_HANDLE;
-    }
+            _mmapOptions.manualInmport.disable();
+            _mmapOptions.addLdrRef.disable();
+            _mmapOptions.wipeHeader.disable();
+            _mmapOptions.noTls.disable();
+            _mmapOptions.noExceptions.disable();
+            break;
 
-    // Invalid path
-    if (path == nullptr || path[0] == 0)
-    {
-        MessageBoxW( _hMainDlg, L"Please select image to inject", L"Error", MB_ICONERROR );
-        return ERROR_INVALID_PARAMETER;
-    }
-
-    // Validate architecture
-    if (!_imagePE.IsPureManaged() && _imagePE.mType() == blackbone::mt_mod32 && barrier.targetWow64 == false)
-    {
-        MessageBoxW( _hMainDlg, L"Can't inject 32 bit image into native 64 bit process", L"Error", MB_ICONERROR );
-        return ERROR_INVALID_IMAGE_HASH;
-    }
-    // Can't inject managed dll through WOW64 barrier
-    else if (_imagePE.IsPureManaged() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
-    {
-        if (barrier.type == blackbone::wow_32_64)
-            MessageBoxW( _hMainDlg, L"Please use Xenos64.exe to inject managed dll into x64 process", L"Error", MB_ICONERROR );
-        else
-            MessageBoxW( _hMainDlg, L"Please use Xenos.exe to inject managed dll into WOW64 process", L"Error", MB_ICONERROR );
-
-        return ERROR_INVALID_IMAGE_HASH;
-    }
-    else if (_imagePE.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_32_32)
-    {
-        MessageBoxW( _hMainDlg, L"Please use Xenos64.exe to inject 64 bit image into WOW64 process", L"Error", MB_ICONERROR );
-        return ERROR_INVALID_IMAGE_HASH;
-    }
-    // Can't execute code in another thread trough WOW64 barrier
-    else if (thdId != 0 && barrier.type != blackbone::wow_32_32 &&  barrier.type != blackbone::wow_64_64)
-    {
-        MessageBoxW( _hMainDlg, L"Can't execute code in existing thread trough WOW64 barrier", L"Error", MB_ICONERROR );
-        return ERROR_INVALID_IMAGE_HASH;
-    }
-    // Manual map restrictions
-    else if (isManual && ((_imagePE.mType() == blackbone::mt_mod32 && barrier.sourceWow64 == false) ||
-        (_imagePE.mType() == blackbone::mt_mod64 && barrier.sourceWow64 == true)))
-    {
-        if (_imagePE.mType() == blackbone::mt_mod32)
-            MessageBoxW( _hMainDlg, L"Please use Xenos.exe to map 32 bit image", L"Error", MB_ICONERROR );
-        else
-            MessageBoxW( _hMainDlg, L"Please use Xenos64.exe to map 64 bit image", L"Error", MB_ICONERROR );
-
-        return ERROR_INVALID_IMAGE_HASH;
-    }
-    else if (isManual && _imagePE.IsPureManaged())
-    {
-        MessageBoxW( _hMainDlg, L"Pure managed images can't be manually mapped yet", L"Error", MB_ICONERROR );
-
-        return ERROR_INVALID_IMAGE_HASH;
-    }
-    // Trying to inject x64 dll into WOW64 process
-    else if (_imagePE.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_64_32)
-    {
-        int btn = MessageBoxW( _hMainDlg,
-                               L"Are you sure you want to inject 64 bit dll into WOW64 process?",
-                               L"Warning",
-                               MB_ICONWARNING | MB_YESNO );
-
-        // Canceled by user
-        if (btn != IDYES)
-            return ERROR_CANCELLED;
+        default:
+            break;
     }
 
     return ERROR_SUCCESS;
 }
 
-/// <summary>
-/// Validate initialization routine
-/// </summary>
-/// <param name="init">Routine name</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::ValidateInit( const char* init )
-{
-    // Validate init routine
-    if (_imagePE.IsPureManaged())
-    {
-        blackbone::ImageNET::mapMethodRVA methods;
-        _imagePE.net().Parse( methods );
-        bool found = false;
 
-        if (!methods.empty() && init && init[0] != 0)
-        {
-            std::wstring winit = blackbone::Utils::AnsiToWstring( init );
-
-            for (auto& val : methods)
-            if (winit == (val.first.first + L"." + val.first.second))
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            MessageBoxW( _hMainDlg, L"Image does not contain specified method", L"Error", MB_ICONERROR );
-            return ERROR_NOT_FOUND;
-        }
-    }
-    else if (init && init[0] != 0)
-    {
-        std::list<std::string> names;
-        _imagePE.GetExportNames( names );
-
-        auto iter = std::find( names.begin(), names.end(), init );
-        if (iter == names.end())
-        {
-            MessageBoxW( _hMainDlg, L"Image does not contain specified export", L"Error", MB_ICONERROR );
-            return ERROR_NOT_FOUND;
-        }
-    }
-
-    return ERROR_SUCCESS;
-}
-
-/// <summary>
-/// Validate image before injection
-/// </summary>
-/// <param name="path">Image path</param>
-/// <param name="init">Initizliation routine</param>
-/// <returns></returns>
-DWORD MainDlg::ValidateImage( const wchar_t* path, const char* init )
-{
-    DWORD status  = ERROR_SUCCESS;
-    auto& barrier = _proc.core().native()->GetWow64Barrier();
-    DWORD thdId = _newProcess ? 0 : (DWORD)ComboBox_GetItemData( GetDlgItem( _hMainDlg, IDC_THREADS ), 
-                                                                 ComboBox_GetCurSel( GetDlgItem( _hMainDlg, IDC_THREADS ) ) );
-
-    bool isManual = (ComboBox_GetCurSel( GetDlgItem( _hMainDlg, IDC_OP_TYPE ) ) == 1);
-
-    return ValidateArch( path, barrier, thdId, isManual );
-}
-
-/// <summary>
-/// Initiate injection process
-/// </summary>
-/// <param name="path">Image path</param>
-/// <param name="init">Initizliation routine</param>
-/// <param name="arg">Initizliation routine argument</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::DoInject( const wchar_t* path, const char* init, const wchar_t* arg )
-{
-    _path = path;
-    _init = init;
-    _arg = arg;
-
-    CreateThread( NULL, 0, &MainDlg::InjectWrap, this, 0, NULL );
-
-    return ERROR_SUCCESS;
-}
-
-/// <summary>
-/// Injector thread wrapper
-/// </summary>
-/// <param name="lpPram">this pointer</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::InjectWrap( LPVOID lpPram )
-{
-    MainDlg* pThis = (MainDlg*)lpPram;
-    return pThis->InjectWorker( pThis->_path, pThis->_init, pThis->_arg );
-}
-
-/// <summary>
-/// Injection routine
-/// </summary>
-/// <param name="path">Image path</param>
-/// <param name="init">Initizliation routine/param>
-/// <param name="arg">Initizliation routine argument</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::InjectWorker( const std::wstring& path, std::string init, std::wstring arg )
-{
-    blackbone::Thread *pThread = nullptr;
-    const blackbone::ModuleData* mod = nullptr;
-    PROCESS_INFORMATION pi = { 0 };
-    wchar_t cmdline[256] = { 0 };
-    HWND hCombo = GetDlgItem( _hMainDlg, IDC_THREADS );
-    DWORD thdId = (DWORD)ComboBox_GetItemData( hCombo, ComboBox_GetCurSel( hCombo ) );
-    bool bManual = ComboBox_GetCurSel( GetDlgItem( _hMainDlg, IDC_OP_TYPE ) ) == 1;
-    
-    GetDlgItemTextW( _hMainDlg, IDC_CMDLINE, cmdline, ARRAYSIZE( cmdline ) );  
-
-    // Check export
-    if (ValidateInit( init.c_str() ) != STATUS_SUCCESS)
-        return ERROR_CANCELLED;
-
-    // Create new process
-    if (_newProcess)
-    {
-        STARTUPINFOW si = { 0 };
-        si.cb = sizeof(si);
-
-        if (!CreateProcessW( _procPath.c_str(), cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ))
-        {
-            MessageBoxW( _hMainDlg, L"Failed to create new process", L"Error", MB_ICONERROR );
-            return GetLastError();
-        }
-
-        thdId = 0;
-
-        // Wait for process to initialize loader
-        Sleep( 1 );
-
-        AttachToProcess( pi.dwProcessId );
-    }
-
-    // Final sanity check
-    if (ValidateImage( path.c_str(), init.c_str() ) != ERROR_SUCCESS)
-    {
-        if (_newProcess)
-            TerminateProcess( pi.hProcess, 0 );
-
-        return ERROR_CANCELLED;
-    }
-        
-    // Normal inject
-    if (bManual == false)
-    {
-        if (_imagePE.IsPureManaged())
-        {
-            DWORD code = 0;
-
-            if (!_proc.modules().InjectPureIL( blackbone::ImageNET::GetImageRuntimeVer( path.c_str() ),
-                path, blackbone::Utils::AnsiToWstring( init ), arg, code ))
-            {
-                if (_newProcess)
-                    TerminateProcess( pi.hProcess, 0 );
-
-                MessageBoxW( _hMainDlg, L"Failed to inject image", L"Error", MB_ICONERROR );
-                return ERROR_FUNCTION_FAILED;
-            }
-        }
-        else if (!_newProcess && thdId != 0)
-        {
-            pThread = _proc.threads().get( thdId );
-            if (pThread == nullptr)
-            {
-                if (_newProcess)
-                    TerminateProcess( pi.hProcess, 0 );
-
-                MessageBoxW( _hMainDlg, L"Selected thread does not exist", L"Error", MB_ICONERROR );
-                return ERROR_NOT_FOUND;
-            }
-
-            // Load 
-            auto pLoadLib = _proc.modules().GetExport( _proc.modules().GetModule( L"kernel32.dll" ), "LoadLibraryW" ).procAddress;
-            blackbone::RemoteFunction<decltype(&LoadLibraryW)> pfn( _proc, (decltype(&LoadLibraryW))pLoadLib, path.c_str() );
-            decltype(pfn)::ReturnType junk = 0;
-            pfn.Call( junk, pThread );
-
-            mod = _proc.modules().GetModule( path );
-        }
-        else
-            mod = _proc.modules().Inject( path );
-    }
-    // Manual map
-    else
-    {
-        thdId = 0;
-        int flags = blackbone::RebaseProcess | blackbone::NoDelayLoad | MmapFlags();
-
-        mod = _proc.mmap().MapImage( path, flags );
-    }
-
-    if (mod == 0 && !_imagePE.IsPureManaged())
-    {
-        if (_newProcess)
-            TerminateProcess( pi.hProcess, 0 );
-
-        MessageBoxW( _hMainDlg, L"Failed to inject image", L"Error", MB_ICONERROR );
-        return ERROR_NOT_FOUND;
-    }
-
-    // Call init for native image
-    if (!init.empty() && !_imagePE.IsPureManaged())
-    {
-        auto fnPtr = _proc.modules().GetExport( mod, init.c_str() ).procAddress;
-
-        if (thdId == 0)
-        {
-            auto argMem = _proc.memory().Allocate( 0x1000, PAGE_READWRITE );
-            argMem.Write( 0, arg.length() * sizeof(wchar_t)+2, arg.c_str() );
-
-            _proc.remote().ExecDirect( fnPtr, argMem.ptr() );
-        }
-        else
-        {
-            pThread = _proc.threads().get( thdId );
-            if (pThread == nullptr)
-            {
-                if (_newProcess)
-                    TerminateProcess( pi.hProcess, 0 );
-
-                MessageBoxW( _hMainDlg, L"Selected thread does not exist", L"Error", MB_ICONERROR );
-                return ERROR_NOT_FOUND;
-            }
-
-            blackbone::RemoteFunction<int( _stdcall* )(const wchar_t*)> pfn( _proc, (int( _stdcall* )(const wchar_t*))fnPtr, arg.c_str() );
-            int junk = 0;
-
-            pfn.Call( junk, pThread );
-        }
-    }
-
-    // Unlink module if required
-    if (!_imagePE.IsPureManaged() && !bManual && Button_GetCheck( GetDlgItem( _hMainDlg, IDC_UNLINK ) ))
-        if (_proc.modules().Unlink( mod ) == false)
-            MessageBoxW( _hMainDlg, L"Failed to unlink module", L"Error", MB_ICONERROR );
-
-    // MessageBoxW( _hMainDlg, L"Successfully injected", L"Info", MB_ICONINFORMATION );
-    //ResumeThread( pi.hThread );
-
-    return ERROR_SUCCESS;
-}

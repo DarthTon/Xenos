@@ -2,21 +2,26 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Routines.cpp" />
     <ClCompile Include="DlgModules.cpp">
-      <Filter>ModuleView</Filter>
+      <Filter>Interface\ModuleView</Filter>
     </ClCompile>
     <ClCompile Include="MainWnd.cpp">
-      <Filter>Dialog</Filter>
+      <Filter>Interface</Filter>
     </ClCompile>
     <ClCompile Include="Dlg_Funcs.cpp">
-      <Filter>Dialog</Filter>
+      <Filter>Interface</Filter>
     </ClCompile>
     <ClCompile Include="FileUtil.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="ConfigMgr.cpp">
       <Filter>Config</Filter>
+    </ClCompile>
+    <ClCompile Include="InjectionCore.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Routines.cpp">
+      <Filter>Interface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -30,10 +35,10 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="DlgModules.h">
-      <Filter>ModuleView</Filter>
+      <Filter>Interface\ModuleView</Filter>
     </ClInclude>
     <ClInclude Include="MainWnd.h">
-      <Filter>Dialog</Filter>
+      <Filter>Interface</Filter>
     </ClInclude>
     <ClInclude Include="rapidxml_wrap.hpp">
       <Filter>XML</Filter>
@@ -59,6 +64,27 @@
     <ClInclude Include="ConfigMgr.h">
       <Filter>Config</Filter>
     </ClInclude>
+    <ClInclude Include="ComboBox.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="EditBox.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="Control.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckBox.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="InjectionCore.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="ListView.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="Message.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resources">
@@ -70,17 +96,23 @@
     <Filter Include="Common">
       <UniqueIdentifier>{748eb939-8503-4952-a1db-c1ae4decb08d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ModuleView">
-      <UniqueIdentifier>{457956b4-994e-419f-80f9-d247456895a1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Dialog">
-      <UniqueIdentifier>{752d7940-aa62-4560-b5df-8ac164a55084}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Utils">
       <UniqueIdentifier>{c0025122-f8eb-4c1e-9488-a267ba281a69}</UniqueIdentifier>
     </Filter>
     <Filter Include="Config">
       <UniqueIdentifier>{330a2b04-3766-4494-9b13-33b7905d8572}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{9ba9fa83-575f-4c0e-b0c1-4f2b437a9f96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface">
+      <UniqueIdentifier>{752d7940-aa62-4560-b5df-8ac164a55084}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface\Controls">
+      <UniqueIdentifier>{e5176c4f-97f0-4e73-bcbb-0c5b1d91abda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface\ModuleView">
+      <UniqueIdentifier>{457956b4-994e-419f-80f9-d247456895a1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

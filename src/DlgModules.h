@@ -2,6 +2,8 @@
 
 #include "stdafx.h"
 #include "resource.h"
+#include "ListView.hpp"
+
 #include "../../BlackBone/src/BlackBone/Process/Process.h"
 #include "../../BlackBone/src/BlackBone/PE/FileProjection.h"
 #include "../../BlackBone/src/BlackBone/PE/PEParser.h"
@@ -13,6 +15,14 @@ class ModulesDlg
 
     typedef std::map<UINT, PDLGPROC> mapMsgProc;
     typedef std::map<WORD, PDLGPROC> mapCtrlProc;
+
+    enum ColumnID
+    {
+        Name = 0,
+        ImageBase,
+        Platform,
+        LoadType
+    };
 
 public:
     ModulesDlg( blackbone::Process& proc );
@@ -34,9 +44,11 @@ private:
     ////////////////////////////////////////////////////////////////////////////////
 
 private:
-    HWND         _hDlg = NULL;
-    mapMsgProc   Messages;
-    mapCtrlProc  Events;
+    HWND        _hDlg = NULL;
+    mapMsgProc  Messages;
+    mapCtrlProc Events;
+
+    ctrl::ListView _modList;
 
     blackbone::Process& _process;
 };

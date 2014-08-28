@@ -1,5 +1,7 @@
 #include "DlgModules.h"
 
+#include "Message.hpp"
+
 ModulesDlg* pInstance = nullptr;
 
 ModulesDlg::ModulesDlg( blackbone::Process& proc )
@@ -11,8 +13,8 @@ ModulesDlg::ModulesDlg( blackbone::Process& proc )
     Messages[WM_COMMAND]    = &ModulesDlg::OnCommand;
     Messages[WM_CLOSE]      = &ModulesDlg::OnClose;
 
-    Events[IDC_BUTTON_CLOSE]    = &ModulesDlg::OnCloseBtn;
-    Events[IDC_BUTTON_UNLOAD]   = &ModulesDlg::OnUnload;
+    Events[IDC_BUTTON_CLOSE]  = &ModulesDlg::OnCloseBtn;
+    Events[IDC_BUTTON_UNLOAD] = &ModulesDlg::OnUnload;
 }
 
 ModulesDlg::~ModulesDlg()
@@ -34,36 +36,17 @@ INT_PTR ModulesDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     LVCOLUMNW lvc = { 0 };
     _hDlg = hDlg;
 
-    HWND hList = GetDlgItem( hDlg, IDC_LIST_MODULES );
+    _modList.Attach( GetDlgItem( hDlg, IDC_LIST_MODULES ) );
 
-    ListView_SetExtendedListViewStyle( hList, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER );
+    ListView_SetExtendedListViewStyle( _modList.hwnd(), LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER );
 
     //
     // Insert columns
     //
-    lvc.mask = LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
-    lvc.pszText = L"Name";
-    lvc.cx = 100;
-    
-    ListView_InsertColumn( hList, 0, &lvc );
-
-    lvc.pszText = L"Image Base";
-    lvc.iSubItem = 1;
-    lvc.cx = 100;
-
-    ListView_InsertColumn( hList, 1, &lvc );
-
-    lvc.pszText = L"Platform";
-    lvc.iSubItem = 2;
-    lvc.cx = 60;
-
-    ListView_InsertColumn( hList, 2, &lvc );
-
-    lvc.pszText = L"Load type";
-    lvc.iSubItem = 3;
-    lvc.cx = 80;
-
-    ListView_InsertColumn( hList, 3, &lvc );
+    _modList.AddColumn( L"Name",       100, Name );
+    _modList.AddColumn( L"Image Base", 100, ImageBase );
+    _modList.AddColumn( L"Platform",   60,  Platform );
+    _modList.AddColumn( L"Load type",  80,  LoadType );
 
     RefrestList();
 
@@ -95,27 +78,22 @@ INT_PTR ModulesDlg::OnCloseBtn( HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 
 INT_PTR ModulesDlg::OnUnload( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    HWND hList = GetDlgItem( _hDlg, IDC_LIST_MODULES );
-    wchar_t address[64] = { 0 };
-
     // Get selection
-    auto idx = ListView_GetNextItem( hList, 0, LVNI_SELECTED );
+    auto idx = _modList.selection();
     if (idx == MAXUINT)
         idx = 0;
-
-    ListView_GetItemText( hList, idx, 1, address, ARRAYSIZE( address ) );
 
     if (_process.valid())
     {
         wchar_t* pEnd = nullptr;
-        blackbone::module_t modBase = wcstoull( address, &pEnd, 0x10 );
+        blackbone::module_t modBase = wcstoull( _modList.itemText( idx, ImageBase ).c_str(), &pEnd, 0x10 );
         auto mod = _process.modules().GetModule( modBase );
         auto barrier = _process.core().native()->GetWow64Barrier();
 
         // Validate module
         if (barrier.type == blackbone::wow_32_32 && mod->type == blackbone::mt_mod64)
         {
-            MessageBoxW( hDlg, L"Please use Xenos64.exe to unload 64 bit modules from WOW64 process", L"Error", MB_ICONERROR );
+            Message::ShowError( hDlg, L"Please use Xenos64.exe to unload 64 bit modules from WOW64 process" );
             return TRUE;
         }
 
@@ -125,7 +103,7 @@ INT_PTR ModulesDlg::OnUnload( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
             RefrestList();
         }
         else
-            MessageBoxW( hDlg, L"Module not found", L"Error", MB_ICONERROR );
+            Message::ShowError( hDlg, L"Module not found" );
     }
 
     return TRUE;
@@ -134,15 +112,9 @@ INT_PTR ModulesDlg::OnUnload( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 
 void ModulesDlg::RefrestList( )
 {
-    HWND hList = GetDlgItem( _hDlg, IDC_LIST_MODULES );
-    LVITEMW lvi = { 0 };
-
-    ListView_DeleteAllItems( hList );
-
+    _modList.reset();
     if (!_process.valid())
         return;
-
-    lvi.mask = LVIF_TEXT | LVIF_PARAM;
 
     // Found modules
     auto modsLdr = _process.modules().GetAllModules( blackbone::LdrList );
@@ -168,10 +140,6 @@ void ModulesDlg::RefrestList( )
         wchar_t* platfom = nullptr;
         wchar_t* detected = nullptr;
 
-        lvi.pszText = (LPWSTR)mod.second.name.c_str();
-        lvi.cchTextMax = static_cast<int>(mod.second.name.length()) + 1;
-        lvi.lParam = static_cast<LPARAM>(mod.second.baseAddress);
-
         wsprintf( address, L"0x%08I64x", mod.second.baseAddress );
 
         // Module platform
@@ -192,9 +160,6 @@ void ModulesDlg::RefrestList( )
         else
             detected = L"Section only";
 
-        int pos = ListView_InsertItem( hList, &lvi );
-        ListView_SetItemText( hList, pos, 1, address );
-        ListView_SetItemText( hList, pos, 2, platfom );
-        ListView_SetItemText( hList, pos, 3, detected );
+        _modList.AddItem( mod.second.name, static_cast<LPARAM>(mod.second.baseAddress), { address, platfom, detected } );
     }
 }

@@ -4,34 +4,37 @@
 #include "resource.h"
 #include "DlgModules.h"
 #include "ConfigMgr.h"
-#include "../../BlackBone/src/BlackBone/Config.h"
-#include "../../BlackBone/src/BlackBone/Process/Process.h"
-#include "../../BlackBone/src/BlackBone/PE/FileProjection.h"
-#include "../../BlackBone/src/BlackBone/PE/PEParser.h"
-#include "../../BlackBone/src/BlackBone/Misc/Utils.h"
+#include "ComboBox.hpp"
+#include "EditBox.hpp"
+#include "CheckBox.hpp"
+#include "Message.hpp"
+#include "InjectionCore.h"
 
 class MainDlg
 {
-    typedef INT_PTR ( MainDlg::*PDLGPROC)(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+    typedef INT_PTR( MainDlg::*fnDialogProc )(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
-    typedef std::map<UINT, PDLGPROC> mapMsgProc;
-    typedef std::map<WORD, PDLGPROC> mapCtrlProc;
-
-    enum MapMode
-    {
-        Normal = 0,
-        Manual = 1
-    };
+    typedef std::map<UINT, fnDialogProc> mapMsgProc;
+    typedef std::map<WORD, fnDialogProc> mapCtrlProc;
 
 public:
-	
-	~MainDlg();
+    ~MainDlg();
 
+    /// <summary>
+    /// Get singleton instance
+    /// </summary>
+    /// <returns>Main dialog instance</returns>
     static MainDlg& Instance();
 
+    /// <summary>
+    /// Run GUI
+    /// </summary>
     INT_PTR Run();
 
-	static INT_PTR CALLBACK DlgProcMain(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+    /// <summary>
+    /// Dialog message handler
+    /// </summary>
+    static INT_PTR CALLBACK DlgProcMain( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
 
 private:
     MainDlg();
@@ -39,53 +42,105 @@ private:
     MainDlg& operator=(MainDlg&);
 
 private:
-    DWORD AttachToProcess(DWORD pid);
+    /// <summary>
+    /// Load configuration from file
+    /// </summary>
+    /// <returns>Error code</returns>
+    DWORD LoadConfig();
+
+    /// <summary>
+    /// Save Configuration.
+    /// </summary>
+    /// <returns>Error code</returns>
+    DWORD SaveConfig();
+
+    /// <summary>
+    /// Enumerate processes
+    /// </summary>
+    /// <returns>Error code</returns>
     DWORD FillProcessList();
-    DWORD FillThreads();
-    DWORD SetActiveProcess( bool createNew, const wchar_t* path, DWORD pid = 0xFFFFFFFF );
-    DWORD MmapFlags();
-    DWORD MmapFlags( DWORD flags );
+
+    /// <summary>
+    /// Retrieve process threads
+    /// </summary>
+    /// <param name="pid">Process ID</param>
+    /// <returns>Error code</returns>
+    DWORD FillThreads( DWORD pid );
+
+    /// Set current process
+    /// </summary>
+    /// <param name="pid">Target PID</param>
+    /// <param name="path">Process path.</param>
+    /// <returns>Error code</returns>
+    DWORD SetActiveProcess( DWORD pid, const std::wstring& name );
+
+    /// <summary>
+    /// Get manual map flags from interface
+    /// </summary>
+    /// <returns>Flags</returns>
+    blackbone::eLoadFlags MmapFlags();
+
+    /// <summary>
+    /// Update interface manual map flags
+    /// </summary>
+    /// <param name="flags">Flags</param>
+    /// <returns>Flags</returns>
+    DWORD MmapFlags( blackbone::eLoadFlags flags );
+
+    /// <summary>
+    /// Set injection method
+    /// </summary>
+    /// <param name="mode">Injection mode</param>
+    /// <returns>Error code</returns>
     DWORD SetMapMode( MapMode mode );
-    void  SetRandomTitle();
 
-    DWORD LoadImageFile( const wchar_t* path );
-    DWORD ValidateImage( const wchar_t* path, const char* init );
-    DWORD ValidateArch( const wchar_t* path, const blackbone::Wow64Barrier& barrier, DWORD thdId, bool isManual );
-    DWORD ValidateInit( const char* init );
+    //////////////////////////////////////////////////////////////////////////////////
+    INT_PTR OnInit          ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam ); 
+    INT_PTR OnCommand( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnClose         ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    //////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////
+    INT_PTR OnFileExit      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnLoadImage     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnExecute       ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnDropDown      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnSelChange     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnDragDrop      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnNewProcess    ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnEjectModules  ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    //////////////////////////////////////////////////////////////////////////////////
 
-    DWORD DoInject( const wchar_t* path, const char* init, const wchar_t* arg );
-    static DWORD CALLBACK InjectWrap( LPVOID lpPram );
-    DWORD InjectWorker( const std::wstring& path, std::string init, std::wstring arg );
-
-//////////////////////////////////////////////////////////////////////////////////
-    INT_PTR OnInit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);      //
-    INT_PTR OnCommand(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);   //
-    INT_PTR OnClose(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);     //
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-    INT_PTR OnFileExit(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);  //
-    INT_PTR OnLoadImage( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnExecute(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-    INT_PTR OnDropDown(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-    INT_PTR OnSelChange(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-    INT_PTR OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnNewProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnEjectModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    //////////////////////////////////////////////////////////////////////////////
 private:
-    ModulesDlg          _modulesDlg;
-	HWND                _hMainDlg;
-    static mapMsgProc   Messages;
-    mapCtrlProc         Events;
-    blackbone::Process  _proc;
-    ConfigMgr           _config;
+    HWND          _hMainDlg = NULL;
+    mapMsgProc    _messages;
+    mapCtrlProc   _events;
+    InjectionCore _core;
+    ConfigMgr     _config;
+    std::wstring  _processPath;
 
-    blackbone::FileProjection _file;
-    blackbone::pe::PEParser   _imagePE;
-    std::wstring              _procPath;
-    bool                      _newProcess;
+    //
+    // Interface controls
+    //  
+    ModulesDlg _modulesDlg;         // Module view
 
-    std::wstring _path;
-    std::string  _init;
-    std::wstring _arg;
+    ctrl::ComboBox _procList;       // Process list
+    ctrl::ComboBox _threadList;     // Thread list
+    ctrl::ComboBox _injectionType;  // Injection type
+    ctrl::ComboBox _initFuncList;       // Module exports list
+
+    ctrl::EditBox  _imagePath;      // Path to image
+    ctrl::EditBox  _procCmdLine;    // Process arguments
+    ctrl::EditBox  _initArg;        // Init routine argument
+
+    ctrl::CheckBox _unlink;         // Unlink image after injection
+
+    struct
+    {
+        ctrl::CheckBox addLdrRef;
+        ctrl::CheckBox manualInmport;
+        ctrl::CheckBox noTls;
+        ctrl::CheckBox noExceptions;
+        ctrl::CheckBox wipeHeader;
+
+    } _mmapOptions;
 };

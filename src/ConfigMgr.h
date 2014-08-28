@@ -15,8 +15,8 @@ public:
         std::wstring initArgs;          // Arguments passed into init function
 
         uint32_t manualMapFlags = 0;    // Manual mapping flags
-
-        bool manualMap = false;         // Use manual mapping
+        uint32_t injectMode = 0;        // Injection type
+        
         bool newProcess = false;        // Start new process instead of using existing
         bool threadHijack = false;      // Inject by hijacking existing process thread
         bool unlink = false;            // Unlink image after injection

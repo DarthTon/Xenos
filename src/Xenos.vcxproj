@@ -189,15 +189,23 @@
     <ClCompile Include="ConfigMgr.cpp" />
     <ClCompile Include="Dlg_Funcs.cpp" />
     <ClCompile Include="FileUtil.cpp" />
+    <ClCompile Include="InjectionCore.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainWnd.cpp" />
     <ClCompile Include="Routines.cpp" />
     <ClCompile Include="DlgModules.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CheckBox.hpp" />
+    <ClInclude Include="ComboBox.hpp" />
     <ClInclude Include="ConfigMgr.h" />
+    <ClInclude Include="Control.hpp" />
     <ClInclude Include="DlgModules.h" />
+    <ClInclude Include="EditBox.hpp" />
     <ClInclude Include="FileUtil.h" />
+    <ClInclude Include="InjectionCore.h" />
+    <ClInclude Include="ListView.hpp" />
+    <ClInclude Include="Message.hpp" />
     <ClInclude Include="rapidxml\rapidxml.hpp" />
     <ClInclude Include="rapidxml\rapidxml_iterators.hpp" />
     <ClInclude Include="rapidxml\rapidxml_print.hpp" />
