@@ -4,8 +4,7 @@
 
 #include "../../BlackBone/src/BlackBone/Config.h"
 #include "../../BlackBone/src/BlackBone/Process/Process.h"
-#include "../../BlackBone/src/BlackBone/PE/FileProjection.h"
-#include "../../BlackBone/src/BlackBone/PE/PEParser.h"
+#include "../../BlackBone/src/BlackBone/PE/PEImage.h"
 #include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
 
@@ -135,10 +134,9 @@ private:
         );
 
 private:
-    blackbone::Process        _proc;
-    blackbone::FileProjection _file;
-    blackbone::pe::PEParser   _imagePE;
-    InjectContext             _context;
-    HWND&                     _hMainDlg;
+    blackbone::Process     _proc;
+    blackbone::pe::PEImage _imagePE;
+    InjectContext          _context;
+    HWND&                  _hMainDlg;
 };
 

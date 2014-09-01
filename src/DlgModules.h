@@ -5,8 +5,6 @@
 #include "ListView.hpp"
 
 #include "../../BlackBone/src/BlackBone/Process/Process.h"
-#include "../../BlackBone/src/BlackBone/PE/FileProjection.h"
-#include "../../BlackBone/src/BlackBone/PE/PEParser.h"
 #include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
 class ModulesDlg

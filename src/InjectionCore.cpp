@@ -32,20 +32,6 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
             return GetLastError();
         }
 
-        // Wait for loader to initialize internal structures
-        if (context.mode >= Manual)
-        {
-            // Leave no open handles
-            ResumeThread( pi.hThread );
-            CloseHandle( pi.hProcess );
-            CloseHandle( pi.hThread );
-            pi.hProcess = NULL;
-            pi.hThread = NULL;
-
-            // If APC is delivered too fast, LdrLoadDll will fail with STATUS_DLL_INIT_FAILED code
-            Sleep( context.mode == Kernel_APC ? 250 : 5 );
-        }
-
         context.threadID = 0;
         pid = pi.dwProcessId;
     }
@@ -53,11 +39,21 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
     // Skip attach if kernel injection
     if (context.mode >= Kernel_Thread)
     {
+        // Leave no open handles
+        ResumeThread( pi.hThread );
+        CloseHandle( pi.hProcess );
+        CloseHandle( pi.hThread );
+        pi.hProcess = NULL;
+        pi.hThread = NULL;
+
+        // If APC is delivered too fast, LdrLoadDll will fail with STATUS_DLL_INIT_FAILED code
+        Sleep( context.mode == Kernel_APC ? 250 : 5 );
+
         context.pid = pid;
         return ERROR_SUCCESS;
     }
 
-    NTSTATUS status = _proc.Attach( pid );
+    NTSTATUS status = pi.hProcess ? _proc.Attach( pi.hProcess ) : _proc.Attach( pid );
     if (status != STATUS_SUCCESS)
     {
         std::wstring errmsg = L"Can not attach to process.\n" + blackbone::Utils::GetErrorDescription( status );
@@ -65,6 +61,12 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
 
         return status;
     }
+
+    // Create new thread to make sure LdrInitializeProcess gets called
+    auto& mods = _proc.modules();
+    auto pProc = mods.GetExport( mods.GetModule( L"ntdll.dll", blackbone::Sections ), "NtYieldExecution" ).procAddress;
+    if (pProc)
+        _proc.remote().ExecDirect( pProc, 0 );
 
     return ERROR_SUCCESS;
 }
@@ -79,13 +81,13 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
 DWORD InjectionCore::LoadImageFile( const std::wstring& path, std::list<std::string>& exportNames )
 {
     // Check if image is a PE file
-    if (_file.Project( path ) == nullptr || _imagePE.Parse( _file.base(), _file.isPlainData() ) == false)
+    if (!NT_SUCCESS( _imagePE.Load( path ) ))
     {
         std::wstring errstr = std::wstring( L"File \"" ) + path + L"\" is not a valid PE image";
 
         Message::ShowError( _hMainDlg, errstr.c_str() );
 
-        _file.Release();
+        _imagePE.Release();
         return ERROR_INVALID_IMAGE_HASH;
     }
 
@@ -154,21 +156,6 @@ DWORD InjectionCore::ValidateContext( const InjectContext& context )
     {
         Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject 64 bit image into WOW64 process" );
         return ERROR_INVALID_PARAMETER;
-    }
-
-    // Can't inject into new process through WOW64 barrier
-    if (context.pid == 0)
-    {
-        if (_imagePE.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_32_64)
-        {
-            Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject 64 bit image into new process" );
-            return ERROR_INVALID_PARAMETER;
-        }
-        else if (_imagePE.mType() == blackbone::mt_mod32 && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
-        {
-            Message::ShowWarning( _hMainDlg, L"Please use Xenos.exe to inject 32 bit image into new process" );
-            return ERROR_INVALID_PARAMETER;
-        }
     }
 
     // Can't execute code in another thread trough WOW64 barrier
@@ -383,8 +370,11 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
         // Success
         if (errCode == ERROR_SUCCESS)
         {
-            if (pCtx->mode == Normal)
+            if (pCtx->mode < Kernel_Thread)
+            {
                 ResumeThread( pi.hThread );
+                CloseHandle( pi.hThread );
+            }
         }
         // Failed, terminate created process if any
         else
