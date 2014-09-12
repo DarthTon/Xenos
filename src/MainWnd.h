@@ -108,6 +108,7 @@ private:
     INT_PTR OnDragDrop      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnNewProcess    ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnEjectModules  ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnProtectSelf   ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     //////////////////////////////////////////////////////////////////////////////////
 
 private:

@@ -46,6 +46,8 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
         _injectionType.Add( L"Kernel driver manual map", Kernel_DriverMap);
 
         _mmapOptions.hideVad.enable();
+
+        EnableMenuItem( GetMenu( _hMainDlg ), ID_TOOLS_PROTECT, MF_ENABLED );
     }
 
     _injectionType.selection( 0 );
@@ -241,6 +243,23 @@ INT_PTR MainDlg::OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
     return TRUE;
 }
+
+INT_PTR MainDlg::OnProtectSelf( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    // Protect current process
+    if (blackbone::Driver().loaded())
+        status = blackbone::Driver().ProtectProcess( GetCurrentProcessId(), true );
+
+    if (!NT_SUCCESS( status ))
+        Message::ShowError( hDlg, L"Failed to protect current process.\n" + blackbone::Utils::GetErrorDescription( status ) );
+    else
+        Message::ShowInfo( hDlg, L"Successfully protected" );
+
+    return TRUE;
+}
+
 
 INT_PTR MainDlg::OnEjectModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {

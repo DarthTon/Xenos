@@ -123,6 +123,7 @@ BEGIN
     POPUP "&Tools"
     BEGIN
         MENUITEM "E&ject modules",              ID_TOOLS_EJECTMODULES
+        MENUITEM "&Protect self",               ID_TOOLS_PROTECT, INACTIVE
     END
 END
 

@@ -35,9 +35,10 @@ private:
         HWND parent = NULL )
     {
         UINT uType = MB_ICONERROR;
+
         if (type == Warning)
             uType = MB_ICONWARNING;
-        else if (uType == Info)
+        else if (type == Info)
             uType = MB_ICONINFORMATION;
 
         MessageBoxW( parent, msg.c_str(), title.c_str(), uType );

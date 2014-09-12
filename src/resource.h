@@ -32,9 +32,10 @@
 #define IDC_LIST_MODULES                1015
 #define IDC_CMDLINE                     1016
 #define IDC_HIDEVAD                     1017
-#define IDC_UNLINK2                     1018
 #define IDC_INJ_CLOSE                   1018
 #define ID_TOOLS_EJECTMODULES           32772
+#define ID_TOOLS_PROTECTSELF            32773
+#define ID_TOOLS_PROTECT                32774
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -43,7 +44,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        139
-#define _APS_NEXT_COMMAND_VALUE         32773
+#define _APS_NEXT_COMMAND_VALUE         32775
 #define _APS_NEXT_CONTROL_VALUE         1016
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

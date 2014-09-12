@@ -39,6 +39,7 @@ INT_PTR MainDlg::Run()
     _events[CBN_DROPDOWN]    = &MainDlg::OnDropDown;
     _events[CBN_SELCHANGE]   = &MainDlg::OnSelChange;
 
+    _events[ID_TOOLS_PROTECT]      = &MainDlg::OnProtectSelf;
     _events[ID_TOOLS_EJECTMODULES] = &MainDlg::OnEjectModules;
 
     return DialogBox( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDD_MAIN ), NULL, &MainDlg::DlgProcMain );
