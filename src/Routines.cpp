@@ -53,6 +53,7 @@ DWORD MainDlg::LoadConfig()
         _initFuncList.text( cfg.initRoutine );
 
         _unlink.checked( cfg.unlink );
+        _injClose.checked( cfg.close );
 
         // Injection type
         _injectionType.selection( cfg.injectMode );
@@ -85,6 +86,7 @@ DWORD MainDlg::SaveConfig()
     cfg.threadHijack   = (thdId != 0 && thdId != 0xFFFFFFFF);
     cfg.manualMapFlags = MmapFlags();
     cfg.unlink         = _unlink.checked();
+    cfg.close          = _injClose.checked();
 
     _config.Save( cfg );
 
@@ -230,6 +232,9 @@ blackbone::eLoadFlags MainDlg::MmapFlags()
     if (_mmapOptions.noExceptions)
         flags |= blackbone::NoExceptions;
 
+    if (_mmapOptions.hideVad)
+        flags |= blackbone::HideVAD;
+
     return flags;
 }
 
@@ -245,6 +250,7 @@ DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
     _mmapOptions.wipeHeader.checked( flags & blackbone::WipeHeader ? true : false );
     _mmapOptions.noTls.checked( flags & blackbone::NoTLS ? true : false );
     _mmapOptions.noExceptions.checked( flags & blackbone::NoExceptions ? true : false );
+    _mmapOptions.hideVad.checked( flags & blackbone::HideVAD ? true : false );
 
     return flags;
 }
@@ -257,39 +263,42 @@ DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
 /// <returns>Error code</returns>
 DWORD MainDlg::SetMapMode( MapMode mode )
 {
+    // Reset everything
+    _procCmdLine.enable();
+    _procList.enable();
+    _threadList.enable();
+    _unlink.enable();
+    _initFuncList.enable();
+    _initArg.enable();
+
+    _mmapOptions.manualInmport.enable();
+    _mmapOptions.addLdrRef.enable();
+    _mmapOptions.wipeHeader.enable();
+    _mmapOptions.noTls.enable();
+    _mmapOptions.noExceptions.enable();
+    if (blackbone::Driver().loaded())
+        _mmapOptions.hideVad.enable();
+
     switch (mode)
     {
         case Normal:
-            _threadList.enable();
-            _unlink.enable();
-
-            _initFuncList.enable();
-            _initArg.enable();
-
             _mmapOptions.manualInmport.disable();
             _mmapOptions.addLdrRef.disable();
             _mmapOptions.wipeHeader.disable();
             _mmapOptions.noTls.disable();
             _mmapOptions.noExceptions.disable();
+            _mmapOptions.hideVad.disable();
             break;
 
         case Manual:
             _threadList.selection( 0 );
             _threadList.disable();
             _unlink.disable();
-
-            _initFuncList.enable();
-            _initArg.enable();
-
-            _mmapOptions.manualInmport.enable();
-            _mmapOptions.addLdrRef.enable();
-            _mmapOptions.wipeHeader.enable();
-            _mmapOptions.noTls.enable();
-            _mmapOptions.noExceptions.enable();         
             break;
 
         case Kernel_Thread:
         case Kernel_APC:
+        case Kernel_DriverMap:
             _threadList.selection( 0 );
             _threadList.disable();
             _unlink.disable();
@@ -304,6 +313,14 @@ DWORD MainDlg::SetMapMode( MapMode mode )
             _mmapOptions.wipeHeader.disable();
             _mmapOptions.noTls.disable();
             _mmapOptions.noExceptions.disable();
+            _mmapOptions.hideVad.disable();
+
+            if (mode == Kernel_DriverMap)
+            {
+                _procCmdLine.disable();
+                _procList.disable();
+            }
+
             break;
 
         default:
@@ -312,5 +329,3 @@ DWORD MainDlg::SetMapMode( MapMode mode )
 
     return ERROR_SUCCESS;
 }
-
-

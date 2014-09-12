@@ -126,13 +126,15 @@ private:
     ctrl::ComboBox _procList;       // Process list
     ctrl::ComboBox _threadList;     // Thread list
     ctrl::ComboBox _injectionType;  // Injection type
-    ctrl::ComboBox _initFuncList;       // Module exports list
+    ctrl::ComboBox _initFuncList;   // Module exports list
 
     ctrl::EditBox  _imagePath;      // Path to image
     ctrl::EditBox  _procCmdLine;    // Process arguments
     ctrl::EditBox  _initArg;        // Init routine argument
 
-    ctrl::CheckBox _unlink;         // Unlink image after injection
+    ctrl::CheckBox _injClose;       // Close application after injection
+
+    ctrl::CheckBox _unlink;         // Unlink image after injection   
 
     struct
     {
@@ -141,6 +143,7 @@ private:
         ctrl::CheckBox noTls;
         ctrl::CheckBox noExceptions;
         ctrl::CheckBox wipeHeader;
+        ctrl::CheckBox hideVad;
 
     } _mmapOptions;
 };

@@ -20,6 +20,7 @@ public:
         bool newProcess = false;        // Start new process instead of using existing
         bool threadHijack = false;      // Inject by hijacking existing process thread
         bool unlink = false;            // Unlink image after injection
+        bool close = false;             // Close app after injection
     };
 
 public:

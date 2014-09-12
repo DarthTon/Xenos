@@ -5,6 +5,8 @@
 InjectionCore::InjectionCore( HWND& hMainDlg )
     :_hMainDlg( hMainDlg )
 {
+    // Load driver
+    blackbone::Driver().EnsureLoaded();
 }
 
 
@@ -20,6 +22,16 @@ InjectionCore::~InjectionCore()
 /// <returns>Error code</returns>
 DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_INFORMATION& pi )
 {
+    NTSTATUS status = STATUS_SUCCESS;
+
+    // No process required for driver mapping
+    if (context.mode == Kernel_DriverMap)
+    {
+        context.threadID = 0;
+        return status;
+    }
+
+    // Create new process
     if (pid == 0)
     {
         STARTUPINFOW si = { 0 };
@@ -32,41 +44,43 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
             return GetLastError();
         }
 
+        if (NT_SUCCESS( _proc.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS ) ))
+        {
+            // Create new thread to make sure LdrInitializeProcess gets called
+            auto& mods = _proc.modules();
+            auto pProc = mods.GetExport( mods.GetModule( L"ntdll.dll", blackbone::Sections ), "NtYieldExecution" ).procAddress;
+            if (pProc)
+                _proc.remote().ExecDirect( pProc, 0 );
+        }
+
+        // No process handle is required for kernel injection
+        if (context.mode >= Kernel_Thread)
+        {
+            context.pid = pi.dwProcessId;
+            _proc.Detach();
+
+            // Thread must be running for APC to execute
+            if (context.mode == Kernel_APC)
+            {
+                ResumeThread( pi.hThread );
+                Sleep( 100 );
+            }
+        }
+
         context.threadID = 0;
-        pid = pi.dwProcessId;
     }
-    
-    // Skip attach if kernel injection
-    if (context.mode >= Kernel_Thread)
+    // Attach to existing process
+    else if (context.mode < Kernel_Thread)
     {
-        // Leave no open handles
-        ResumeThread( pi.hThread );
-        CloseHandle( pi.hProcess );
-        CloseHandle( pi.hThread );
-        pi.hProcess = NULL;
-        pi.hThread = NULL;
+        status = _proc.Attach( pid );
+        if (status != STATUS_SUCCESS)
+        {
+            std::wstring errmsg = L"Can not attach to the process.\n" + blackbone::Utils::GetErrorDescription( status );
+            Message::ShowError( _hMainDlg, errmsg );
 
-        // If APC is delivered too fast, LdrLoadDll will fail with STATUS_DLL_INIT_FAILED code
-        Sleep( context.mode == Kernel_APC ? 250 : 5 );
-
-        context.pid = pid;
-        return ERROR_SUCCESS;
+            return status;
+        }
     }
-
-    NTSTATUS status = pi.hProcess ? _proc.Attach( pi.hProcess ) : _proc.Attach( pid );
-    if (status != STATUS_SUCCESS)
-    {
-        std::wstring errmsg = L"Can not attach to process.\n" + blackbone::Utils::GetErrorDescription( status );
-        Message::ShowError( _hMainDlg, errmsg );
-
-        return status;
-    }
-
-    // Create new thread to make sure LdrInitializeProcess gets called
-    auto& mods = _proc.modules();
-    auto pProc = mods.GetExport( mods.GetModule( L"ntdll.dll", blackbone::Sections ), "NtYieldExecution" ).procAddress;
-    if (pProc)
-        _proc.remote().ExecDirect( pProc, 0 );
 
     return ERROR_SUCCESS;
 }
@@ -117,18 +131,38 @@ DWORD InjectionCore::LoadImageFile( const std::wstring& path, std::list<std::str
 /// <returns>Error code</returns>
 DWORD InjectionCore::ValidateContext( const InjectContext& context )
 {
-    // No process selected
-    if (!_proc.valid())
-    {
-        Message::ShowError( _hMainDlg, L"Please select valid process before injection" );
-        return ERROR_INVALID_HANDLE;
-    }
-
     // Invalid path
     if (context.imagePath.empty())
     {
         Message::ShowError( _hMainDlg, L"Please select image to inject" );
         return ERROR_INVALID_PARAMETER;
+    }
+
+    // Validate driver
+    if (context.mode == Kernel_DriverMap)
+    {
+        // Only x64 drivers are supported
+        if (_imagePE.mType() != blackbone::mt_mod64)
+        {
+            Message::ShowError( _hMainDlg, L"Can't map x86 drivers" );
+            return ERROR_INVALID_IMAGE_HASH;
+        }
+
+        // Image must be native
+        if (_imagePE.subsystem() != IMAGE_SUBSYSTEM_NATIVE)
+        {
+            Message::ShowError( _hMainDlg, L"Can't map image with non-native subsystem" );
+            return ERROR_INVALID_IMAGE_HASH;
+        }
+
+        return ERROR_SUCCESS;
+    }
+
+    // No process selected
+    if (!_proc.valid())
+    {
+        Message::ShowError( _hMainDlg, L"Please select valid process before injection" );
+        return ERROR_INVALID_HANDLE;
     }
 
     auto& barrier = _proc.core().native()->GetWow64Barrier();
@@ -262,7 +296,7 @@ DWORD InjectionCore::DoInject( InjectContext& ctx )
     // Save last context
     _context = ctx;
 
-    CreateThread( NULL, 0, &InjectionCore::InjectWrapper, new InjectContext( ctx ), 0, NULL );
+    _lastThread = CreateThread( NULL, 0, &InjectionCore::InjectWrapper, new InjectContext( ctx ), 0, NULL );
     return ERROR_SUCCESS;
 }
 
@@ -300,13 +334,14 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
         return errCode;
         
     // Final sanity check
-    if (pCtx->mode < Kernel_Thread)
+    if (pCtx->mode < Kernel_Thread || pCtx->mode == Kernel_DriverMap)
     {
         errCode = ValidateContext( *pCtx );
         if (errCode != ERROR_SUCCESS)
         {
-            if (pCtx->pid == 0)
+            if (pCtx->pid == 0 && _proc.valid())
                 _proc.Terminate();
+
             return errCode;
         }
     }
@@ -340,6 +375,10 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
                 errCode = InjectKernel( *pCtx, mod );
                 break;
 
+            case Kernel_DriverMap:
+                errCode = MapDriver( *pCtx );
+                break;
+
             default:
                 break;
         }
@@ -365,21 +404,25 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
             Message::ShowError( _hMainDlg, L"Failed to unlink module" );
         }
 
-    if (pCtx->pid == 0)
+    // Handle injection errors
+    if (pi.hThread)
     {
-        // Success
         if (errCode == ERROR_SUCCESS)
-        {
-            if (pCtx->mode < Kernel_Thread)
-            {
-                ResumeThread( pi.hThread );
-                CloseHandle( pi.hThread );
-            }
-        }
-        // Failed, terminate created process if any
-        else
-            _proc.Terminate();
+            ResumeThread( pi.hThread );
+
+        CloseHandle( pi.hThread );
     }
+
+    if (pi.hProcess)
+    {
+        if (errCode != ERROR_SUCCESS)
+            TerminateProcess( pi.hProcess, 0 );
+
+        CloseHandle( pi.hProcess );
+    }
+
+    if (_proc.core().handle())
+        _proc.Detach();
     
     return ERROR_SUCCESS;
 }
@@ -441,13 +484,22 @@ DWORD InjectionCore::InjectDefault(
 /// <returns>Error code</returns>
 DWORD InjectionCore::InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod )
 {
-    blackbone::Driver().EnsureLoaded();
     auto status = blackbone::Driver().InjectDll( context.pid, context.imagePath, (context.mode == Kernel_Thread ? IT_Thread : IT_Apc) );
 
     // Revert new process flag
     context.pid = 0;
 
     return status;
+}
+
+/// <summary>
+/// Manually map another system driver into system space
+/// </summary>
+/// <param name="context">Injection context</param>
+/// <returns>Error code</returns>
+DWORD InjectionCore::MapDriver( InjectContext& context )
+{
+    return blackbone::Driver().MMapDriver( context.imagePath );
 }
 
 /// <summary>

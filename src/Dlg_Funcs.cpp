@@ -5,8 +5,6 @@
 INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     _hMainDlg = hDlg;
-    blackbone::Process thisProc;
-    thisProc.Attach( GetCurrentProcessId() );
 
     //
     // Setup controls
@@ -20,6 +18,8 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     _procCmdLine.Attach( GetDlgItem( _hMainDlg, IDC_CMDLINE ) );
     _initArg.Attach( GetDlgItem( _hMainDlg, IDC_ARGUMENT ) );
 
+    _injClose.Attach( GetDlgItem( _hMainDlg, IDC_INJ_CLOSE ) );
+
     _unlink.Attach( GetDlgItem( _hMainDlg, IDC_UNLINK ) );
 
     _mmapOptions.addLdrRef.Attach( GetDlgItem( _hMainDlg, IDC_LDR_REF ) );
@@ -27,6 +27,9 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     _mmapOptions.noTls.Attach( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ) );
     _mmapOptions.noExceptions.Attach( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ) );
     _mmapOptions.wipeHeader.Attach( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ) );
+    _mmapOptions.hideVad.Attach( GetDlgItem( _hMainDlg, IDC_HIDEVAD ) );
+
+    _mmapOptions.hideVad.disable();
 
     // Set dialog title
     SetWindowTextW( _hMainDlg, blackbone::Utils::RandomANString().c_str() );
@@ -35,11 +38,14 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     _injectionType.Add( L"Native inject", Normal );
     _injectionType.Add( L"Manual map", Manual );
 
-    // Disable kernel injection for x86 OS
-    if (!thisProc.core().native()->GetWow64Barrier().x86OS)
+    // Disable kernel injection if no driver available
+    if (blackbone::Driver().loaded())
     {
         _injectionType.Add( L"Kernel (CreateThread)", Kernel_Thread );
         _injectionType.Add( L"Kernel (APC)", Kernel_APC );
+        _injectionType.Add( L"Kernel driver manual map", Kernel_DriverMap);
+
+        _mmapOptions.hideVad.enable();
     }
 
     _injectionType.selection( 0 );
@@ -74,12 +80,7 @@ INT_PTR MainDlg::OnCommand( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 
 INT_PTR MainDlg::OnClose( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    //
-    // SaveConfig
-    //
     SaveConfig();
-
-
     return EndDialog( hDlg, 0 );
 }
 
@@ -132,8 +133,8 @@ INT_PTR MainDlg::OnLoadImage( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
     ofn.lpstrFile = path;
     ofn.lpstrFile[0] = '\0';
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Dynamic link library (*.dll)\0*.dll\0" );
-    ofn.nFilterIndex = 2;
+    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Dynamic link library (*.dll)\0*.dll\0System driver (*.sys)\0*.sys\0" );
+    ofn.nFilterIndex = _injectionType.selection() == Kernel_DriverMap ? 3 : 2;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = NULL;
@@ -175,6 +176,21 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     ctx.unlinkImage = _unlink;
 
     _core.DoInject( ctx );
+
+    // Close after injection
+    if (_injClose.checked())
+    {
+        auto closeRoutine = []( LPVOID pDlg ) -> DWORD
+        {  
+            ((MainDlg*)pDlg)->_core.waitOnInjection();
+            ((MainDlg*)pDlg)->SaveConfig();
+
+            ::EndDialog( ((MainDlg*)pDlg)->_hMainDlg, 0 );
+            return 0;
+        };
+
+        CreateThread( NULL, 0, static_cast<LPTHREAD_START_ROUTINE>(closeRoutine), this, 0, NULL );
+    }
 
     return TRUE;
 }

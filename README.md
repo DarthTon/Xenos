@@ -6,7 +6,8 @@ Windows dll injector. This project completely depends on Blackbone library - htt
 ## Features ##
 
 - Supports x86 and x64 processes and modules
-- Kernel-mode injection feature
+- Kernel-mode injection feature (driver required)
+- Manual map of kernel drivers (driver required)
 - Injection of pure managed images without proxy dll
 - Windows 7 cross-session and cross-desktop injection
 - Injection into native processes (those having only ntdll loaded)
@@ -18,6 +19,7 @@ Windows dll injector. This project completely depends on Blackbone library - htt
 
 Manual map features:
 - Relocations, import, delayed import, bound import
+- Hiding allocated image memory (driver required)
 - Static TLS and TLS callbacks
 - Security cookie
 - Image manifests and SxS

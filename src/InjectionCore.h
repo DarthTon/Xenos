@@ -10,10 +10,12 @@
 
 enum MapMode
 {
-    Normal = 0,     // Default - CreateRemoteThread/execute in existing thread
-    Manual,         // Manual map
-    Kernel_Thread,  // Kernel-mode CreateThread into LdrLoadDll
-    Kernel_APC,     // Kernel-mode LdrLoadDll APC 
+    Normal = 0,         // Default - CreateRemoteThread/execute in existing thread
+    Manual,             // Manual map
+    Kernel_Thread,      // Kernel-mode CreateThread into LdrLoadDll
+    Kernel_APC,         // Kernel-mode LdrLoadDll APC 
+
+    Kernel_DriverMap,   // Kernel-mode driver mapping
 };
 
 /// <summary>
@@ -70,6 +72,7 @@ public:
 
     inline blackbone::Process& process() { return _proc; }
     inline InjectContext& lastContext() { return _context; }
+    inline DWORD waitOnInjection() { return WaitForSingleObject( _lastThread, INFINITE ); }
 
 private:
     /// <summary>
@@ -109,6 +112,13 @@ private:
     DWORD InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod );
 
     /// <summary>
+    /// Manually map another system driver into system space
+    /// </summary>
+    /// <param name="context">Injection context</param>
+    /// <returns>Error code</returns>
+    DWORD MapDriver( InjectContext& context );
+
+    /// <summary>
     /// Default injection method
     /// </summary>
     /// <param name="context">Injection context</param>
@@ -138,5 +148,6 @@ private:
     blackbone::pe::PEImage _imagePE;
     InjectContext          _context;
     HWND&                  _hMainDlg;
+    HANDLE                 _lastThread = NULL;
 };
 

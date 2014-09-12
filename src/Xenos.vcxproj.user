@@ -11,10 +11,10 @@
     <RemoteDebuggerServerName>192.168.56.101</RemoteDebuggerServerName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <DebuggerFlavor>WindowsRemoteDebugger</DebuggerFlavor>
     <RemoteDebuggerCommand>C:\RemoteDbg\$(TargetFileName)</RemoteDebuggerCommand>
     <RemoteDebuggerWorkingDirectory>C:\RemoteDbg\</RemoteDebuggerWorkingDirectory>
-    <RemoteDebuggerServerName>192.168.56.101</RemoteDebuggerServerName>
+    <RemoteDebuggerServerName>192.168.56.102</RemoteDebuggerServerName>
     <DeploymentDirectory>C:\RemoteDbg\</DeploymentDirectory>
     <RemoteDebuggerDeployDebugCppRuntime>true</RemoteDebuggerDeployDebugCppRuntime>
   </PropertyGroup>

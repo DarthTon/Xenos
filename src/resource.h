@@ -30,8 +30,10 @@
 #define IDC_LOAD_IMG2                   1015
 #define IDC_NEW_PROC                    1015
 #define IDC_LIST_MODULES                1015
-#define IDC_IMAGE_PATH2                 1016
 #define IDC_CMDLINE                     1016
+#define IDC_HIDEVAD                     1017
+#define IDC_UNLINK2                     1018
+#define IDC_INJ_CLOSE                   1018
 #define ID_TOOLS_EJECTMODULES           32772
 #define IDC_STATIC                      -1
 
