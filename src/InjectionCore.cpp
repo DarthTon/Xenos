@@ -124,6 +124,7 @@ DWORD InjectionCore::LoadImageFile( const std::wstring& path, std::list<std::str
     return ERROR_SUCCESS;
 }
 
+
 /// <summary>
 /// Validate all parameters
 /// </summary>
@@ -301,6 +302,20 @@ DWORD InjectionCore::DoInject( InjectContext& ctx )
 }
 
 /// <summary>
+/// Waits for the injection thread to finish
+/// </summary>
+/// <returns>Injection status</returns>
+DWORD InjectionCore::WaitOnInjection()
+{
+    DWORD code = ERROR_ACCESS_DENIED;
+
+    WaitForSingleObject( _lastThread, INFINITE );
+    GetExitCodeThread( _lastThread, &code );
+
+    return code;
+}
+
+/// <summary>
 /// Injector thread wrapper
 /// </summary>
 /// <param name="lpPram">Injection context</param>
@@ -424,7 +439,7 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
     if (_proc.core().handle())
         _proc.Detach();
     
-    return ERROR_SUCCESS;
+    return errCode;
 }
 
 
@@ -545,3 +560,4 @@ DWORD InjectionCore::CallInitRoutine(
 
     return ERROR_SUCCESS;
 }
+

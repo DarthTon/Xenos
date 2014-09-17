@@ -179,15 +179,18 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 
     _core.DoInject( ctx );
 
-    // Close after injection
+    // Close after successfull injection
     if (_injClose.checked())
     {
-        auto closeRoutine = []( LPVOID pDlg ) -> DWORD
+        auto closeRoutine = []( LPVOID lpParam ) -> DWORD
         {  
-            ((MainDlg*)pDlg)->_core.waitOnInjection();
-            ((MainDlg*)pDlg)->SaveConfig();
+            auto pDlg = (MainDlg*)lpParam;
+            if (pDlg->_core.WaitOnInjection() == ERROR_SUCCESS)
+            {
+                pDlg->SaveConfig();
+                ::EndDialog( pDlg->_hMainDlg, 0 );
+            }
 
-            ::EndDialog( ((MainDlg*)pDlg)->_hMainDlg, 0 );
             return 0;
         };
 

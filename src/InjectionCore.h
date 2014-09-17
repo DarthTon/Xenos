@@ -70,9 +70,14 @@ public:
     /// <returns>Error code</returns>
     DWORD DoInject( InjectContext& ctx );
 
+    /// <summary>
+    /// Waits for the injection thread to finish
+    /// </summary>
+    /// <returns>Injection status</returns>
+    DWORD WaitOnInjection();
+
     inline blackbone::Process& process() { return _proc; }
     inline InjectContext& lastContext() { return _context; }
-    inline DWORD waitOnInjection() { return WaitForSingleObject( _lastThread, INFINITE ); }
 
 private:
     /// <summary>
