@@ -90,9 +90,9 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
 /// Load selected image and do some validation
 /// </summary>
 /// <param name="path">Full qualified image path</param>
-/// <param name="exportNames">Image exports</param>
+/// <param name="exports">Image exports</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::LoadImageFile( const std::wstring& path, std::list<std::string>& exportNames )
+DWORD InjectionCore::LoadImageFile( const std::wstring& path, blackbone::pe::listExports& exports )
 {
     // Check if image is a PE file
     if (!NT_SUCCESS( _imagePE.Load( path ) ))
@@ -114,12 +114,12 @@ DWORD InjectionCore::LoadImageFile( const std::wstring& path, std::list<std::str
         for (auto& entry : methods)
         {
             std::wstring name = entry.first.first + L"." + entry.first.second;
-            exportNames.push_back( blackbone::Utils::WstringToAnsi( name ) );
+            exports.push_back( std::make_pair( blackbone::Utils::WstringToAnsi( name ), 0 ) );
         }
     }
     // Simple exports otherwise
     else
-        _imagePE.GetExportNames( exportNames );
+        _imagePE.GetExports( exports );
 
     return ERROR_SUCCESS;
 }
@@ -241,8 +241,9 @@ DWORD InjectionCore::ValidateContext( const InjectContext& context )
 /// Validate initialization routine
 /// </summary>
 /// <param name="init">Routine name</param>
+/// <param name="initRVA">Routine RVA, if found</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::ValidateInit( const std::string& init )
+DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA )
 {
     // Validate init routine
     if (_imagePE.IsPureManaged())
@@ -271,14 +272,22 @@ DWORD InjectionCore::ValidateInit( const std::string& init )
     }
     else if (!init.empty())
     {
-        std::list<std::string> names;
-        _imagePE.GetExportNames( names );
+        blackbone::pe::listExports exports;
+        _imagePE.GetExports( exports );
 
-        auto iter = std::find( names.begin(), names.end(), init );
-        if (iter == names.end())
+        auto iter = std::find_if(
+            exports.begin(), exports.end(),
+            [&init]( const blackbone::pe::listExports::value_type& val ){ return val.first == init; } );
+
+        if (iter == exports.end())
         {
+            initRVA = 0;
             Message::ShowError( _hMainDlg, L"Image does not contain specified export" );
             return ERROR_NOT_FOUND;
+        }
+        else
+        {
+            initRVA = iter->second;
         }
     }
 
@@ -337,9 +346,10 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
     blackbone::Thread *pThread = nullptr;
     const blackbone::ModuleData* mod = nullptr;
     PROCESS_INFORMATION pi = { 0 };
+    uint32_t exportRVA = 0;
 
     // Check export
-    errCode = ValidateInit( pCtx->initRoutine );
+    errCode = ValidateInit( pCtx->initRoutine, exportRVA );
     if (errCode != ERROR_SUCCESS)
         return errCode;
 
@@ -370,7 +380,7 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
             errCode = ERROR_NOT_FOUND;
             Message::ShowError( _hMainDlg, L"Selected thread does not exist" );
         }
-    }    
+    }
 
     // Actual injection
     if (errCode == ERROR_SUCCESS)
@@ -387,7 +397,7 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
 
             case Kernel_Thread:
             case Kernel_APC:
-                errCode = InjectKernel( *pCtx, mod );
+                errCode = InjectKernel( *pCtx, mod, exportRVA );
                 break;
 
             case Kernel_DriverMap:
@@ -399,10 +409,13 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
         }
     }
 
+    if (mod == nullptr)
+        exportRVA = 0;
+
     // Initialize routine
     if (errCode == ERROR_SUCCESS)
     {
-        errCode = CallInitRoutine( *pCtx, mod, pThread );
+        errCode = CallInitRoutine( *pCtx, mod, exportRVA, pThread );
     }
     else
     {
@@ -497,9 +510,15 @@ DWORD InjectionCore::InjectDefault(
 /// <param name="context">Injection context</param>
 /// <param name="mod">Resulting module</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod )
+DWORD InjectionCore::InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod, uint32_t initRVA /*= 0*/ )
 {
-    auto status = blackbone::Driver().InjectDll( context.pid, context.imagePath, (context.mode == Kernel_Thread ? IT_Thread : IT_Apc) );
+    auto status = blackbone::Driver().InjectDll(
+        context.pid,
+        context.imagePath,
+        (context.mode == Kernel_Thread ? IT_Thread : IT_Apc),
+        initRVA,
+        context.initRoutineArg 
+        );
 
     // Revert new process flag
     context.pid = 0;
@@ -527,18 +546,14 @@ DWORD InjectionCore::MapDriver( InjectContext& context )
 DWORD InjectionCore::CallInitRoutine(
     InjectContext& context,
     const blackbone::ModuleData* mod,
+    uint64_t exportRVA,
     blackbone::Thread* pThread
     )
 {
     // Call init for native image
     if (!context.initRoutine.empty() && !_imagePE.IsPureManaged() && context.mode < Kernel_Thread)
     {
-        auto fnPtr = _proc.modules().GetExport( mod, context.initRoutine.c_str() ).procAddress;
-        if (fnPtr == 0)
-        {
-            Message::ShowError( _hMainDlg, L"Initialization routine not found" );
-            return ERROR_NOT_FOUND;
-        }
+        auto fnPtr = mod->baseAddress + exportRVA;
 
         // Create new thread
         if (pThread == nullptr)

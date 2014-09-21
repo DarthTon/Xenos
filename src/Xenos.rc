@@ -29,41 +29,44 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 // Dialog
 //
 
-IDD_MAIN DIALOGEX 0, 0, 245, 352
+IDD_MAIN DIALOGEX 0, 0, 245, 386
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_ACCEPTFILES
 CAPTION "Xenos"
 MENU IDR_MENU_MAIN
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    PUSHBUTTON      "Inject",IDC_EXECUTE,7,313,231,32,BS_FLAT
-    COMBOBOX        IDC_COMBO_PROC,75,40,121,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Process selection",IDC_STATIC,12,42,56,8
-    PUSHBUTTON      "...",IDC_LOAD_IMG,212,80,20,14
-    LTEXT           "Image",IDC_STATIC,47,83,21,8
-    EDITTEXT        IDC_IMAGE_PATH,75,80,132,14,ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "Init routine",IDC_STATIC,31,104,36,8
-    COMBOBOX        IDC_INIT_EXPORT,75,102,157,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Inject",IDC_EXECUTE,7,347,231,32,BS_FLAT
+    COMBOBOX        IDC_COMBO_PROC,75,58,157,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Process selection",IDC_STATIC,12,60,56,8
+    PUSHBUTTON      "...",IDC_LOAD_IMG,212,98,20,14
+    LTEXT           "Image",IDC_STATIC,47,101,21,8
+    EDITTEXT        IDC_IMAGE_PATH,75,98,132,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Init routine",IDC_STATIC,31,122,36,8
+    COMBOBOX        IDC_INIT_EXPORT,75,120,157,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Injection type",IDC_STATIC,22,21,46,8
     COMBOBOX        IDC_OP_TYPE,75,19,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Context thread",IDC_STATIC,17,210,50,8
-    COMBOBOX        IDC_THREADS,76,209,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    CONTROL         "Add loader reference",IDC_LDR_REF,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,251,84,10
-    CONTROL         "Manually resolve imports",IDC_MANUAL_IMP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,271,95,10
-    CONTROL         "Wipe headers",IDC_WIPE_HDR,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,291,60,10
-    GROUPBOX        "Manual map options",IDC_STATIC,7,236,231,71
-    LTEXT           "Init argument",IDC_STATIC,23,125,44,8
-    EDITTEXT        IDC_ARGUMENT,75,122,157,14,ES_AUTOHSCROLL
-    CONTROL         "Ignore TLS",IDC_IGNORE_TLS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,251,51,10
-    CONTROL         "No exception support",IDC_NOEXCEPT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,271,85,10
-    GROUPBOX        "Native loader options",IDC_STATIC,7,166,231,69
-    CONTROL         "Unlink module",IDC_UNLINK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,185,59,10
-    PUSHBUTTON      "New",IDC_NEW_PROC,200,39,32,15
-    LTEXT           "Command line",IDC_STATIC,23,61,45,8
-    EDITTEXT        IDC_CMDLINE,75,59,157,14,ES_AUTOHSCROLL
-    CONTROL         "Conceal memory",IDC_HIDEVAD,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,291,69,10
-    CONTROL         "Close after injection",IDC_INJ_CLOSE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,144,80,10
-    GROUPBOX        "General options",IDC_STATIC,7,7,231,153
+    LTEXT           "Context thread",IDC_STATIC,17,234,50,8
+    COMBOBOX        IDC_THREADS,76,233,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Add loader reference",IDC_LDR_REF,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,275,84,10
+    CONTROL         "Manually resolve imports",IDC_MANUAL_IMP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,295,95,10
+    CONTROL         "Wipe headers",IDC_WIPE_HDR,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,315,60,10
+    GROUPBOX        "Manual map options",IDC_STATIC,7,260,231,71
+    LTEXT           "Init argument",IDC_STATIC,23,143,44,8
+    EDITTEXT        IDC_ARGUMENT,75,140,157,14,ES_AUTOHSCROLL
+    CONTROL         "Ignore TLS",IDC_IGNORE_TLS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,275,51,10
+    CONTROL         "No exception support",IDC_NOEXCEPT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,295,85,10
+    GROUPBOX        "Native loader options",IDC_STATIC,7,190,231,69
+    CONTROL         "Unlink module",IDC_UNLINK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,209,59,10
+    LTEXT           "Command line",IDC_STATIC,23,83,45,8
+    EDITTEXT        IDC_CMDLINE,75,77,157,14,ES_AUTOHSCROLL
+    CONTROL         "Conceal memory",IDC_HIDEVAD,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,315,69,10
+    CONTROL         "Close after injection",IDC_INJ_CLOSE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,162,80,10
+    GROUPBOX        "General options",IDC_STATIC,7,7,231,178
+    LTEXT           "Process type",IDC_STATIC,26,41,42,8
+    CONTROL         "Existing",IDC_EXISTING_PROC,"Button",BS_AUTORADIOBUTTON,75,41,41,10
+    CONTROL         "New",IDC_NEW_PROC,"Button",BS_AUTORADIOBUTTON,129,41,30,10
+    CONTROL         "Manual launch",IDC_AUTO_PROC,"Button",BS_AUTORADIOBUTTON,172,41,61,10
 END
 
 IDD_MODULES DIALOGEX 0, 0, 265, 257
@@ -74,6 +77,16 @@ BEGIN
     PUSHBUTTON      "Unload",IDC_BUTTON_UNLOAD,7,236,76,14
     PUSHBUTTON      "Close window",IDC_BUTTON_CLOSE,182,236,76,14
     CONTROL         "",IDC_LIST_MODULES,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SORTASCENDING | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,7,251,223
+END
+
+IDD_WAIT_PROC DIALOGEX 0, 0, 219, 71
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    PUSHBUTTON      "Cancel",ID_WAIT_CANCEL,162,50,50,14
+    CONTROL         "",IDC_WAIT_BAR,"msctls_progress32",WS_BORDER,7,23,205,15
+    CTEXT           "Static",IDC_WAIT_TEXT,7,9,205,8
 END
 
 
@@ -90,7 +103,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 238
         TOPMARGIN, 7
-        BOTTOMMARGIN, 345
+        BOTTOMMARGIN, 379
     END
 
     IDD_MODULES, DIALOG
@@ -99,6 +112,14 @@ BEGIN
         RIGHTMARGIN, 258
         TOPMARGIN, 7
         BOTTOMMARGIN, 250
+    END
+
+    IDD_WAIT_PROC, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 212
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 64
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -127,16 +148,6 @@ BEGIN
     END
 END
 
-#endif    // Neutral (Default) resources
-/////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////
-// Russian (Russia) resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
-LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
-#pragma code_page(1251)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -175,7 +186,7 @@ BEGIN
     END
 END
 
-#endif    // Russian (Russia) resources
+#endif    // Neutral (Default) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

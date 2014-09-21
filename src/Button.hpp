@@ -5,13 +5,13 @@
 namespace ctrl
 {
 
-class CheckBox : public Control
+class Button : public Control
 {
 public:
-    CheckBox( HWND hwnd = NULL )
+    Button( HWND hwnd = NULL )
         : Control( hwnd )  {  }
 
-    virtual bool checked() const        { return Button_GetCheck( _hwnd ) != 0; }
+    virtual bool checked() const        { return Button_GetCheck( _hwnd ) != BST_UNCHECKED; }
     virtual void checked( bool state )  { Button_SetCheck( _hwnd, state ); }
 
     inline operator bool() { return checked(); }

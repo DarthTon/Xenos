@@ -3,10 +3,11 @@
 #include "stdafx.h"
 #include "resource.h"
 #include "DlgModules.h"
+#include "DlgWait.h"
 #include "ConfigMgr.h"
 #include "ComboBox.hpp"
 #include "EditBox.hpp"
-#include "CheckBox.hpp"
+#include "Button.hpp"
 #include "Message.hpp"
 #include "InjectionCore.h"
 
@@ -106,7 +107,9 @@ private:
     INT_PTR OnDropDown      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnSelChange     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnDragDrop      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnExProcess     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnNewProcess    ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    INT_PTR OnAutoProcess   ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnEjectModules  ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     INT_PTR OnProtectSelf   ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
     //////////////////////////////////////////////////////////////////////////////////
@@ -133,18 +136,22 @@ private:
     ctrl::EditBox  _procCmdLine;    // Process arguments
     ctrl::EditBox  _initArg;        // Init routine argument
 
-    ctrl::CheckBox _injClose;       // Close application after injection
+    ctrl::Button _exProc;           // Existing process radio-button
+    ctrl::Button _newProc;          // New process radio-button
+    ctrl::Button _autoProc;         // Manual launch radio-button
 
-    ctrl::CheckBox _unlink;         // Unlink image after injection   
+    ctrl::Button _injClose;       // Close application after injection
+
+    ctrl::Button _unlink;         // Unlink image after injection   
 
     struct
     {
-        ctrl::CheckBox addLdrRef;
-        ctrl::CheckBox manualInmport;
-        ctrl::CheckBox noTls;
-        ctrl::CheckBox noExceptions;
-        ctrl::CheckBox wipeHeader;
-        ctrl::CheckBox hideVad;
+        ctrl::Button addLdrRef;
+        ctrl::Button manualInmport;
+        ctrl::Button noTls;
+        ctrl::Button noExceptions;
+        ctrl::Button wipeHeader;
+        ctrl::Button hideVad;
 
     } _mmapOptions;
 };

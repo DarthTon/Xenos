@@ -13,15 +13,15 @@ DWORD MainDlg::LoadConfig()
         // Image
         if (!cfg.imagePath.empty())
         {
-            std::list<std::string> exportNames;
+            blackbone::pe::listExports exports;
 
-            if (_core.LoadImageFile( cfg.imagePath, exportNames ) == ERROR_SUCCESS)
+            if (_core.LoadImageFile( cfg.imagePath, exports ) == ERROR_SUCCESS)
             {
                 _imagePath.text( cfg.imagePath );
 
                 _initFuncList.reset();
-                for (auto& name : exportNames)
-                    _initFuncList.Add( name );
+                for (auto& exprt : exports)
+                    _initFuncList.Add( exprt.first );
             }
         }
 
@@ -55,6 +55,22 @@ DWORD MainDlg::LoadConfig()
         _unlink.checked( cfg.unlink );
         _injClose.checked( cfg.close );
 
+        // Process mode
+        switch (cfg.processMode)
+        {
+            case Existing:
+                _exProc.checked( true );
+                break;
+
+            case NewProcess:
+                _newProc.checked( true );
+                break;
+
+            case ManualLaunch:
+                _autoProc.checked( true );
+                break;
+        }
+
         // Injection type
         _injectionType.selection( cfg.injectMode );
 
@@ -82,6 +98,7 @@ DWORD MainDlg::SaveConfig()
     cfg.procCmdLine    = _procCmdLine.text();
     cfg.initRoutine    = _initFuncList.selectedText();
     cfg.initArgs       = _initArg.text();
+    cfg.processMode    = (_exProc ? Existing : (_newProc ? NewProcess : ManualLaunch));
     cfg.injectMode     = _injectionType.selection();
     cfg.threadHijack   = (thdId != 0 && thdId != 0xFFFFFFFF);
     cfg.manualMapFlags = MmapFlags();
@@ -263,25 +280,33 @@ DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
 /// <returns>Error code</returns>
 DWORD MainDlg::SetMapMode( MapMode mode )
 {
-    // Reset everything
-    _procCmdLine.enable();
-    _procList.enable();
-    _threadList.enable();
-    _unlink.enable();
+    bool bProcExists = IsDlgButtonChecked( _hMainDlg, IDC_EXISTING_PROC ) == BST_CHECKED;
+
+    // Reset controls state
+    if (bProcExists)
+    {
+        _procCmdLine.disable();
+        _procList.enable();
+        _threadList.enable();
+    }
+    else
+    {
+        _procCmdLine.enable();
+        _procList.disable();
+        _threadList.disable();
+    }
+
+    _exProc.enable();
+    _newProc.enable();
+    _autoProc.enable();
     _initFuncList.enable();
     _initArg.enable();
-
-    _mmapOptions.manualInmport.enable();
-    _mmapOptions.addLdrRef.enable();
-    _mmapOptions.wipeHeader.enable();
-    _mmapOptions.noTls.enable();
-    _mmapOptions.noExceptions.enable();
-    if (blackbone::Driver().loaded())
-        _mmapOptions.hideVad.enable();
 
     switch (mode)
     {
         case Normal:
+            _unlink.enable();
+
             _mmapOptions.manualInmport.disable();
             _mmapOptions.addLdrRef.disable();
             _mmapOptions.wipeHeader.disable();
@@ -291,6 +316,14 @@ DWORD MainDlg::SetMapMode( MapMode mode )
             break;
 
         case Manual:
+            _mmapOptions.manualInmport.enable();
+            _mmapOptions.addLdrRef.enable();
+            _mmapOptions.wipeHeader.enable();
+            _mmapOptions.noTls.enable();
+            _mmapOptions.noExceptions.enable();
+            if (blackbone::Driver().loaded())
+                _mmapOptions.hideVad.enable();
+
             _threadList.selection( 0 );
             _threadList.disable();
             _unlink.disable();
@@ -303,11 +336,6 @@ DWORD MainDlg::SetMapMode( MapMode mode )
             _threadList.disable();
             _unlink.disable();
 
-            _initFuncList.selectedText( L"" );
-            _initFuncList.disable();
-            _initArg.reset();
-            _initArg.disable();
-
             _mmapOptions.manualInmport.disable();
             _mmapOptions.addLdrRef.disable();
             _mmapOptions.wipeHeader.disable();
@@ -317,6 +345,13 @@ DWORD MainDlg::SetMapMode( MapMode mode )
 
             if (mode == Kernel_DriverMap)
             {
+                _initFuncList.selectedText( L"" );
+                _initFuncList.disable();
+                _initArg.reset();
+                _initArg.disable();
+                _exProc.disable();
+                _newProc.disable();
+                _autoProc.disable();
                 _procCmdLine.disable();
                 _procList.disable();
             }

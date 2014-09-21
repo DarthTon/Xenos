@@ -18,6 +18,10 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     _procCmdLine.Attach( GetDlgItem( _hMainDlg, IDC_CMDLINE ) );
     _initArg.Attach( GetDlgItem( _hMainDlg, IDC_ARGUMENT ) );
 
+    _exProc.Attach( GetDlgItem( _hMainDlg, IDC_EXISTING_PROC ) );
+    _newProc.Attach( GetDlgItem( _hMainDlg, IDC_NEW_PROC ) );
+    _autoProc.Attach( GetDlgItem( _hMainDlg, IDC_AUTO_PROC ) );
+
     _injClose.Attach( GetDlgItem( _hMainDlg, IDC_INJ_CLOSE ) );
 
     _unlink.Attach( GetDlgItem( _hMainDlg, IDC_UNLINK ) );
@@ -145,15 +149,15 @@ INT_PTR MainDlg::OnLoadImage( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
     bSucc = GetOpenFileName( &ofn );
     if (bSucc)
     {
-        std::list<std::string> exportNames;
+        blackbone::pe::listExports exports;
 
-        if (_core.LoadImageFile( path, exportNames ) == ERROR_SUCCESS)
+        if (_core.LoadImageFile( path, exports ) == ERROR_SUCCESS)
         {
             _imagePath.text( path );
 
             _initFuncList.reset();
-            for (auto& name : exportNames)
-                _initFuncList.Add( name );
+            for (auto& exprt : exports)
+                _initFuncList.Add( exprt.first );
         }
         else
             _imagePath.reset();
@@ -179,7 +183,7 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 
     _core.DoInject( ctx );
 
-    // Close after successfull injection
+    // Close after successful injection
     if (_injClose.checked())
     {
         auto closeRoutine = []( LPVOID lpParam ) -> DWORD
@@ -200,6 +204,16 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     return TRUE;
 }
 
+INT_PTR MainDlg::OnExProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+{
+    _procList.reset();
+    _procList.enable();
+
+    return TRUE;
+
+}
+
+
 INT_PTR MainDlg::OnNewProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     OPENFILENAMEW ofn = { 0 };
@@ -217,11 +231,45 @@ INT_PTR MainDlg::OnNewProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lP
     ofn.lpstrInitialDir = NULL;
     ofn.Flags = OFN_PATHMUSTEXIST;
 
+    _procList.reset();
+    _procList.disable();
+
     if (GetOpenFileName( &ofn ))
+    {
         SetActiveProcess( 0, ofn.lpstrFile );
+    }
 
     return TRUE;
 }
+
+INT_PTR MainDlg::OnAutoProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+{
+    OPENFILENAMEW ofn = { 0 };
+    wchar_t path[MAX_PATH] = { 0 };
+
+    ofn.lStructSize = sizeof( ofn );
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = path;
+    ofn.lpstrFile[0] = '\0';
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0" );
+    ofn.nFilterIndex = 2;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags = OFN_PATHMUSTEXIST;
+
+    _procList.reset();
+    _procList.disable();
+
+    if (GetOpenFileName( &ofn ))
+    {
+        SetActiveProcess( 0, ofn.lpstrFile );
+    }
+
+    return TRUE;
+}
+
 
 INT_PTR MainDlg::OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
@@ -230,15 +278,15 @@ INT_PTR MainDlg::OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
     if(DragQueryFile( hDrop, 0, path, ARRAYSIZE( path ) ) != 0)
     {
-        std::list<std::string> exportNames;
+        blackbone::pe::listExports exports;
 
-        if (_core.LoadImageFile( path, exportNames ) == ERROR_SUCCESS)
+        if (_core.LoadImageFile( path, exports ) == ERROR_SUCCESS)
         {
             _imagePath.text( path );
 
             _initFuncList.reset();
-            for (auto& name : exportNames)
-                _initFuncList.Add( name );
+            for (auto& exprt : exports)
+                _initFuncList.Add( exprt.first );
         }
         else
             _imagePath.reset();

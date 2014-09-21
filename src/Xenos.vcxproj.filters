@@ -23,6 +23,9 @@
     <ClCompile Include="Routines.cpp">
       <Filter>Interface</Filter>
     </ClCompile>
+    <ClCompile Include="DlgWait.cpp">
+      <Filter>Interface\ProcessWait</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h">
@@ -73,9 +76,6 @@
     <ClInclude Include="Control.hpp">
       <Filter>Interface\Controls</Filter>
     </ClInclude>
-    <ClInclude Include="CheckBox.hpp">
-      <Filter>Interface\Controls</Filter>
-    </ClInclude>
     <ClInclude Include="InjectionCore.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -83,6 +83,12 @@
       <Filter>Interface\Controls</Filter>
     </ClInclude>
     <ClInclude Include="Message.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgWait.h">
+      <Filter>Interface\ProcessWait</Filter>
+    </ClInclude>
+    <ClInclude Include="Button.hpp">
       <Filter>Interface\Controls</Filter>
     </ClInclude>
   </ItemGroup>
@@ -113,6 +119,9 @@
     </Filter>
     <Filter Include="Interface\ModuleView">
       <UniqueIdentifier>{457956b4-994e-419f-80f9-d247456895a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface\ProcessWait">
+      <UniqueIdentifier>{2e8d1037-50b9-402e-8e77-93f6ed5d2e91}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

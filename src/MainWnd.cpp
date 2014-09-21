@@ -28,16 +28,18 @@ MainDlg& MainDlg::Instance()
 /// <returns></returns>
 INT_PTR MainDlg::Run()
 {
-    _messages[WM_INITDIALOG] = &MainDlg::OnInit;
-    _messages[WM_COMMAND]    = &MainDlg::OnCommand;
-    _messages[WM_CLOSE]      = &MainDlg::OnClose;
-    _messages[WM_DROPFILES]  = &MainDlg::OnDragDrop;
+    _messages[WM_INITDIALOG]    = &MainDlg::OnInit;
+    _messages[WM_COMMAND]       = &MainDlg::OnCommand;
+    _messages[WM_CLOSE]         = &MainDlg::OnClose;
+    _messages[WM_DROPFILES]     = &MainDlg::OnDragDrop;
 
-    _events[IDC_EXECUTE]     = &MainDlg::OnExecute;
-    _events[IDC_NEW_PROC]    = &MainDlg::OnNewProcess;
-    _events[IDC_LOAD_IMG]    = &MainDlg::OnLoadImage;
-    _events[CBN_DROPDOWN]    = &MainDlg::OnDropDown;
-    _events[CBN_SELCHANGE]   = &MainDlg::OnSelChange;
+    _events[IDC_EXECUTE]        = &MainDlg::OnExecute;
+    _events[IDC_NEW_PROC]       = &MainDlg::OnNewProcess;
+    _events[IDC_EXISTING_PROC]  = &MainDlg::OnExProcess;
+    _events[IDC_AUTO_PROC]      = &MainDlg::OnAutoProcess;
+    _events[IDC_LOAD_IMG]       = &MainDlg::OnLoadImage;
+    _events[CBN_DROPDOWN]       = &MainDlg::OnDropDown;
+    _events[CBN_SELCHANGE]      = &MainDlg::OnSelChange;
 
     _events[ID_TOOLS_PROTECT]      = &MainDlg::OnProtectSelf;
     _events[ID_TOOLS_EJECTMODULES] = &MainDlg::OnEjectModules;
@@ -56,5 +58,6 @@ INT_PTR CALLBACK MainDlg::DlgProcMain( HWND hDlg, UINT message, WPARAM wParam, L
 
     return FALSE;
 }
+
 
 

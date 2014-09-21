@@ -18,6 +18,13 @@ enum MapMode
     Kernel_DriverMap,   // Kernel-mode driver mapping
 };
 
+enum ProcMode
+{
+    Existing = 0,
+    NewProcess,
+    ManualLaunch,
+};
+
 /// <summary>
 /// Injection params
 /// </summary>
@@ -59,9 +66,9 @@ public:
     /// Load selected image and do some validation
     /// </summary>
     /// <param name="path">Full qualified image path</param>
-    /// <param name="exportNames">Image exports</param>
+    /// <param name="exports">Image exports</param>
     /// <returns>Error code</returns>
-    DWORD LoadImageFile( const std::wstring& path, std::list<std::string>& exportNames );
+    DWORD LoadImageFile( const std::wstring& path, blackbone::pe::listExports& exports );
 
     /// <summary>
     /// Initiate injection process
@@ -84,8 +91,9 @@ private:
     /// Validate initialization routine
     /// </summary>
     /// <param name="init">Routine name</param>
+    /// <param name="initRVA">Routine RVA, if found</param>
     /// <returns>Error code</returns>
-    DWORD ValidateInit( const std::string& init );
+    DWORD ValidateInit( const std::string& init, uint32_t& initRVA );
 
     /// <summary>
     /// Validate all parameters
@@ -114,7 +122,7 @@ private:
     /// <param name="context">Injection context</param>
     /// <param name="mod">Resulting module</param>
     /// <returns>Error code</returns>
-    DWORD InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod );
+    DWORD InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod, uint32_t initRVA = 0 );
 
     /// <summary>
     /// Manually map another system driver into system space
@@ -145,6 +153,7 @@ private:
     DWORD CallInitRoutine(
         InjectContext& context,
         const blackbone::ModuleData* mod,
+        uint64_t exportRVA,
         blackbone::Thread* pThread
         );
 

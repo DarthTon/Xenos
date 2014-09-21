@@ -17,6 +17,7 @@ bool ConfigMgr::Save( const ConfigData& data )
         xml.set( L"XenosConfig.threadHijack",   data.threadHijack );
         xml.set( L"XenosConfig.unlink",         data.unlink );
         xml.set( L"XenosConfig.close",          data.close );
+        xml.set( L"XenosConfig.processMode",    data.processMode );
         xml.set( L"XenosConfig.injectMode",     data.injectMode );
         xml.set( L"XenosConfig.procCmdLine",    data.procCmdLine.c_str() );
         xml.set( L"XenosConfig.initRoutine",    data.initRoutine.c_str() );
@@ -50,6 +51,7 @@ bool ConfigMgr::Load( ConfigData& data )
         xml.get_if_present( L"XenosConfig.threadHijack",    data.threadHijack );
         xml.get_if_present( L"XenosConfig.unlink",          data.unlink );
         xml.get_if_present( L"XenosConfig.close",           data.close );
+        xml.get_if_present( L"XenosConfig.processMode",     data.processMode );
         xml.get_if_present( L"XenosConfig.injectMode",      data.injectMode );
         xml.get_if_present( L"XenosConfig.procCmdLine",     data.procCmdLine );
         xml.get_if_present( L"XenosConfig.initRoutine",     data.initRoutine );

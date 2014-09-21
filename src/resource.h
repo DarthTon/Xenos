@@ -10,6 +10,7 @@
 #define IDI_ICON1                       135
 #define IDD_MODULES                     137
 #define IDR_MENU_MAIN                   138
+#define IDD_WAIT_PROC                   139
 #define IDC_EDIT_MAIN                   1000
 #define IDC_EXECUTE                     1001
 #define IDC_COMBO_PROC                  1002
@@ -31,8 +32,14 @@
 #define IDC_NEW_PROC                    1015
 #define IDC_LIST_MODULES                1015
 #define IDC_CMDLINE                     1016
+#define IDC_WAIT_BAR                    1016
 #define IDC_HIDEVAD                     1017
+#define IDC_WAIT_TEXT                   1017
 #define IDC_INJ_CLOSE                   1018
+#define ID_WAIT_CANCEL                  1018
+#define IDC_EXISTING                    1019
+#define IDC_EXISTING_PROC               1019
+#define IDC_AUTO_PROC                   1021
 #define ID_TOOLS_EJECTMODULES           32772
 #define ID_TOOLS_PROTECTSELF            32773
 #define ID_TOOLS_PROTECT                32774
@@ -43,9 +50,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        139
+#define _APS_NEXT_RESOURCE_VALUE        140
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1016
+#define _APS_NEXT_CONTROL_VALUE         1020
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

@@ -187,6 +187,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ConfigMgr.cpp" />
+    <ClCompile Include="DlgWait.cpp" />
     <ClCompile Include="Dlg_Funcs.cpp" />
     <ClCompile Include="FileUtil.cpp" />
     <ClCompile Include="InjectionCore.cpp" />
@@ -196,11 +197,12 @@
     <ClCompile Include="DlgModules.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CheckBox.hpp" />
+    <ClInclude Include="Button.hpp" />
     <ClInclude Include="ComboBox.hpp" />
     <ClInclude Include="ConfigMgr.h" />
     <ClInclude Include="Control.hpp" />
     <ClInclude Include="DlgModules.h" />
+    <ClInclude Include="DlgWait.h" />
     <ClInclude Include="EditBox.hpp" />
     <ClInclude Include="FileUtil.h" />
     <ClInclude Include="InjectionCore.h" />
