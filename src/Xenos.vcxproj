@@ -109,7 +109,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>Shlwapi.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;Dbghelp.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <StackReserveSize>
       </StackReserveSize>
       <StackCommitSize>
@@ -132,7 +132,7 @@
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
-      <AdditionalDependencies>Shlwapi.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;Dbghelp.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -150,14 +150,14 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>Shlwapi.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;Dbghelp.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -176,19 +176,20 @@
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
-      <AdditionalDependencies>Shlwapi.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;Dbghelp.lib;Comctl32.lib;mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ConfigMgr.cpp" />
     <ClCompile Include="DlgWait.cpp" />
     <ClCompile Include="Dlg_Funcs.cpp" />
+    <ClCompile Include="DumpHandler.cpp" />
     <ClCompile Include="FileUtil.cpp" />
     <ClCompile Include="InjectionCore.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -201,8 +202,10 @@
     <ClInclude Include="ComboBox.hpp" />
     <ClInclude Include="ConfigMgr.h" />
     <ClInclude Include="Control.hpp" />
+    <ClInclude Include="Dialog.hpp" />
     <ClInclude Include="DlgModules.h" />
     <ClInclude Include="DlgWait.h" />
+    <ClInclude Include="DumpHandler.h" />
     <ClInclude Include="EditBox.hpp" />
     <ClInclude Include="FileUtil.h" />
     <ClInclude Include="InjectionCore.h" />
@@ -218,6 +221,7 @@
     <ClInclude Include="MainWnd.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Window.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Xenos.rc" />

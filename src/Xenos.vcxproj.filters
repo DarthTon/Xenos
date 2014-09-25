@@ -26,6 +26,9 @@
     <ClCompile Include="DlgWait.cpp">
       <Filter>Interface\ProcessWait</Filter>
     </ClCompile>
+    <ClCompile Include="DumpHandler.cpp">
+      <Filter>Dump</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h">
@@ -91,6 +94,15 @@
     <ClInclude Include="Button.hpp">
       <Filter>Interface\Controls</Filter>
     </ClInclude>
+    <ClInclude Include="Dialog.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="Window.hpp">
+      <Filter>Interface\Controls</Filter>
+    </ClInclude>
+    <ClInclude Include="DumpHandler.h">
+      <Filter>Dump</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resources">
@@ -122,6 +134,9 @@
     </Filter>
     <Filter Include="Interface\ProcessWait">
       <UniqueIdentifier>{2e8d1037-50b9-402e-8e77-93f6ed5d2e91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dump">
+      <UniqueIdentifier>{045106fa-fca8-4b9d-a670-5e01f6707aa9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -16,23 +16,53 @@ InjectionCore::~InjectionCore()
 
 
 /// <summary>
-/// Attach to selected process or create a new process
+/// Get injection target
 /// </summary>
-/// <param name="pid">The pid.</param>
+/// <param name="context">Injection context.</param>
+/// <param name="pi">Process info in case of new process</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_INFORMATION& pi )
+DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi )
 {
-    NTSTATUS status = STATUS_SUCCESS;
+    NTSTATUS status = ERROR_SUCCESS;
 
     // No process required for driver mapping
-    if (context.mode == Kernel_DriverMap)
+    if (context.injectMode == Kernel_DriverMap)
     {
         context.threadID = 0;
         return status;
     }
 
+    // Await new process
+    if (context.procMode == ManualLaunch)
+    {
+        auto procName = blackbone::Utils::StripPath( context.procPath );
+
+        // Filter already existing processes
+        std::vector<blackbone::ProcessInfo> existing, newList, diff;
+        blackbone::Process::EnumByNameOrPID( 0, procName, existing );
+
+        // Wait for process
+        for (_waitActive = true; ; Sleep( 10 ))
+        {
+            // Canceled by user
+            if (!_waitActive)
+                return ERROR_CANCELLED;
+
+            // Detect new process
+            diff.clear();
+            blackbone::Process::EnumByNameOrPID( 0, procName, newList );
+            std::set_difference( newList.begin(), newList.end(), existing.begin(), existing.end(), std::inserter( diff, diff.begin() ) );
+
+            if (!diff.empty())
+            {
+                context.pid = diff.front().pid;
+                context.threadID = 0;
+                break;
+            }
+        }
+    }
     // Create new process
-    if (pid == 0)
+    else if (context.procMode == NewProcess)
     {
         STARTUPINFOW si = { 0 };
         si.cb = sizeof( si );
@@ -44,23 +74,18 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
             return GetLastError();
         }
 
+        // Create new thread to make sure LdrInitializeProcess gets called
         if (NT_SUCCESS( _proc.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS ) ))
-        {
-            // Create new thread to make sure LdrInitializeProcess gets called
-            auto& mods = _proc.modules();
-            auto pProc = mods.GetExport( mods.GetModule( L"ntdll.dll", blackbone::Sections ), "NtYieldExecution" ).procAddress;
-            if (pProc)
-                _proc.remote().ExecDirect( pProc, 0 );
-        }
+            _proc.EnsureInit();
 
         // No process handle is required for kernel injection
-        if (context.mode >= Kernel_Thread)
+        if (context.injectMode >= Kernel_Thread)
         {
             context.pid = pi.dwProcessId;
             _proc.Detach();
 
             // Thread must be running for APC to execute
-            if (context.mode == Kernel_APC)
+            if (context.injectMode == Kernel_APC)
             {
                 ResumeThread( pi.hThread );
                 Sleep( 100 );
@@ -69,10 +94,11 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
 
         context.threadID = 0;
     }
+
     // Attach to existing process
-    else if (context.mode < Kernel_Thread)
+    if (context.injectMode < Kernel_Thread && context.procMode != NewProcess)
     {
-        status = _proc.Attach( pid );
+        status = _proc.Attach( context.pid );
         if (status != STATUS_SUCCESS)
         {
             std::wstring errmsg = L"Can not attach to the process.\n" + blackbone::Utils::GetErrorDescription( status );
@@ -80,6 +106,27 @@ DWORD InjectionCore::CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_
 
             return status;
         }
+
+        //
+        // Make sure loader is initialized
+        //
+        bool ldrInit = false;
+        if (_proc.core().isWow64())
+        {
+            blackbone::_PEB32 peb32 = { 0 };
+            _proc.core().peb( &peb32 );
+            ldrInit = peb32.Ldr != 0;
+        }
+        else
+        {
+            blackbone::_PEB64 peb64 = { 0 };
+            _proc.core().peb( &peb64 );
+            ldrInit = peb64.Ldr != 0;
+        }
+
+        // Create new thread to make sure LdrInitializeProcess gets called
+        if (!ldrInit)
+            _proc.EnsureInit();
     }
 
     return ERROR_SUCCESS;
@@ -140,7 +187,7 @@ DWORD InjectionCore::ValidateContext( const InjectContext& context )
     }
 
     // Validate driver
-    if (context.mode == Kernel_DriverMap)
+    if (context.injectMode == Kernel_DriverMap)
     {
         // Only x64 drivers are supported
         if (_imagePE.mType() != blackbone::mt_mod64)
@@ -201,7 +248,7 @@ DWORD InjectionCore::ValidateContext( const InjectContext& context )
     }
 
     // Manual map restrictions
-    if (context.mode == Manual)
+    if (context.injectMode == Manual)
     {
         if (_imagePE.IsPureManaged())
         {
@@ -354,17 +401,17 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
         return errCode;
 
     // Create new process
-    errCode = CreateOrAttach( pCtx->pid, *pCtx, pi );
+    errCode = GetTargetProcess( *pCtx, pi );
     if (errCode != ERROR_SUCCESS)
         return errCode;
         
     // Final sanity check
-    if (pCtx->mode < Kernel_Thread || pCtx->mode == Kernel_DriverMap)
+    if (pCtx->injectMode < Kernel_Thread || pCtx->injectMode == Kernel_DriverMap)
     {
         errCode = ValidateContext( *pCtx );
         if (errCode != ERROR_SUCCESS)
         {
-            if (pCtx->pid == 0 && _proc.valid())
+            if (pCtx->procMode == NewProcess && _proc.valid())
                 _proc.Terminate();
 
             return errCode;
@@ -385,7 +432,7 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
     // Actual injection
     if (errCode == ERROR_SUCCESS)
     {
-        switch (pCtx->mode)
+        switch (pCtx->injectMode)
         {
             case Normal:
                 errCode = InjectDefault( *pCtx, pThread, mod );
@@ -425,14 +472,16 @@ DWORD InjectionCore::InjectWorker( InjectContext* pCtx )
     }
 
     // Unlink module if required
-    if (errCode == ERROR_SUCCESS && !_imagePE.IsPureManaged() && pCtx->mode == Normal && pCtx->unlinkImage)
+    if (errCode == ERROR_SUCCESS && !_imagePE.IsPureManaged() && pCtx->injectMode == Normal && pCtx->unlinkImage)
         if (_proc.modules().Unlink( mod ) == false)
         {
             errCode = ERROR_FUNCTION_FAILED;
             Message::ShowError( _hMainDlg, L"Failed to unlink module" );
         }
 
+    //
     // Handle injection errors
+    //
     if (pi.hThread)
     {
         if (errCode == ERROR_SUCCESS)
@@ -515,13 +564,10 @@ DWORD InjectionCore::InjectKernel( InjectContext& context, const blackbone::Modu
     auto status = blackbone::Driver().InjectDll(
         context.pid,
         context.imagePath,
-        (context.mode == Kernel_Thread ? IT_Thread : IT_Apc),
+        (context.injectMode == Kernel_Thread ? IT_Thread : IT_Apc),
         initRVA,
-        context.initRoutineArg 
-        );
-
-    // Revert new process flag
-    context.pid = 0;
+        context.initRoutineArg,
+        context.unlinkImage );
 
     return status;
 }
@@ -551,7 +597,7 @@ DWORD InjectionCore::CallInitRoutine(
     )
 {
     // Call init for native image
-    if (!context.initRoutine.empty() && !_imagePE.IsPureManaged() && context.mode < Kernel_Thread)
+    if (!context.initRoutine.empty() && !_imagePE.IsPureManaged() && context.injectMode < Kernel_Thread)
     {
         auto fnPtr = mod->baseAddress + exportRVA;
 

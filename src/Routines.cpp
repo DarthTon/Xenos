@@ -74,7 +74,7 @@ DWORD MainDlg::LoadConfig()
         // Injection type
         _injectionType.selection( cfg.injectMode );
 
-        SetMapMode( (MapMode)cfg.injectMode );
+        UpdateInterface( (MapMode)cfg.injectMode );
         MmapFlags( (blackbone::eLoadFlags)cfg.manualMapFlags );
     }
 
@@ -117,24 +117,19 @@ DWORD MainDlg::SaveConfig()
 /// <returns>Error code</returns>
 DWORD MainDlg::FillProcessList()
 {
-    PROCESSENTRY32W pe32 = { 0 };
-    pe32.dwSize = sizeof(pe32);
+    _procList.reset();
 
-    _procList.reset( );
+    std::vector<blackbone::ProcessInfo> found;
+    blackbone::Process::EnumByNameOrPID( 0, L"", found );
 
-    HANDLE hSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
-    if (hSnap == NULL)
-        return GetLastError();
-
-    for (BOOL res = Process32FirstW( hSnap, &pe32 ); res; res = Process32NextW( hSnap, &pe32 ))
+    for (auto& proc : found)
     {
         wchar_t text[255] = { 0 };
-        swprintf_s( text, L"%ls (%d)", pe32.szExeFile, pe32.th32ProcessID );
+        swprintf_s( text, L"%ls (%d)", proc.imageName.c_str(), proc.pid );
 
-        _procList.Add( text, pe32.th32ProcessID );
+        _procList.Add( text, proc.pid );
     }
 
-    CloseHandle( hSnap );
     return ERROR_SUCCESS;
 }
 
@@ -145,49 +140,16 @@ DWORD MainDlg::FillProcessList()
 /// <returns>Error code</returns>
 DWORD MainDlg::FillThreads( DWORD pid )
 {
-    THREADENTRY32 te32 = { 0 };
-    te32.dwSize = sizeof( te32 );
-    uint64_t thdTime = 0xFFFFFFFFFFFFFFFF;
-    DWORD mainThdId = 0;
-    int mainThdIdx = 0;
-
     _threadList.reset();
-
-    HANDLE hSnap = CreateToolhelp32Snapshot( TH32CS_SNAPTHREAD, 0 );
-    if (hSnap == NULL)
-        return GetLastError();
-
     _threadList.Add( L"New Thread" );
 
-    for (BOOL res = Thread32First( hSnap, &te32 ); res; res = Thread32Next( hSnap, &te32 ))
-    {
-        if (te32.th32OwnerProcessID != pid)
-            continue;
+    std::vector<blackbone::ProcessInfo> found;
+    blackbone::Process::EnumByNameOrPID( pid, L"", found, true );
+    if (found.empty())
+        return ERROR_NOT_FOUND;
 
-        int idx = _threadList.Add( std::to_wstring( te32.th32ThreadID ), te32.th32ThreadID );
-
-        FILETIME times[4] = { 0 };
-        /*HANDLE hThd = OpenThread( THREAD_QUERY_LIMITED_INFORMATION, FALSE, te32.th32ThreadID );
-
-        if (hThd)
-        {
-            GetThreadTimes( hThd, &times[0], &times[1], &times[2], &times[3] );
-            CloseHandle( hThd );
-
-            auto time = ((static_cast<uint64_t>(times[2].dwHighDateTime) << 32) | times[2].dwLowDateTime)
-                + ((static_cast<uint64_t>(times[3].dwHighDateTime) << 32) | times[3].dwLowDateTime);
-
-            if (time < thdTime)
-            {
-                thdTime = time;
-                mainThdId = te32.th32ThreadID;
-                mainThdIdx = idx;
-            }
-        }*/
-    }
-
-    if (mainThdIdx != 0)
-        _threadList.modifyItem( mainThdIdx, std::to_wstring( mainThdId ) + L" (Main)" );
+    for (auto& thd : found.front().threads)
+        _threadList.Add( std::to_wstring( thd.tid ) + (thd.mainThread ? L" (Main)" : L""), thd.tid );
 
     _threadList.selection( 0 );
 
@@ -208,11 +170,12 @@ DWORD MainDlg::SetActiveProcess( DWORD pid, const std::wstring& path )
     {
         // Update process list
         _procList.reset();
-        _procList.Add( blackbone::Utils::StripPath( path ) + L" (New process)", 0 );
+        _procList.Add( blackbone::Utils::StripPath( path ), 0 );
         _procList.selection( 0 );
 
         // Enable command line options field
         _procCmdLine.enable();
+        _threadList.reset();
     }
     else
     {
@@ -249,7 +212,7 @@ blackbone::eLoadFlags MainDlg::MmapFlags()
     if (_mmapOptions.noExceptions)
         flags |= blackbone::NoExceptions;
 
-    if (_mmapOptions.hideVad)
+    if (_mmapOptions.hideVad && blackbone::Driver().loaded())
         flags |= blackbone::HideVAD;
 
     return flags;
@@ -262,6 +225,10 @@ blackbone::eLoadFlags MainDlg::MmapFlags()
 /// <returns>Flags</returns>
 DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
 {
+    // Exclude HideVAD if no driver present
+    if (!blackbone::Driver().loaded())
+        flags &= ~blackbone::HideVAD;
+
     _mmapOptions.manualInmport.checked( flags & blackbone::ManualImports ? true : false );
     _mmapOptions.addLdrRef.checked( flags & blackbone::CreateLdrRef ? true : false );
     _mmapOptions.wipeHeader.checked( flags & blackbone::WipeHeader ? true : false );
@@ -274,26 +241,26 @@ DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
 
 
 /// <summary>
-/// Set injection method
+/// Update interface controls
 /// </summary>
 /// <param name="mode">Injection mode</param>
 /// <returns>Error code</returns>
-DWORD MainDlg::SetMapMode( MapMode mode )
+DWORD MainDlg::UpdateInterface( MapMode mode )
 {
-    bool bProcExists = IsDlgButtonChecked( _hMainDlg, IDC_EXISTING_PROC ) == BST_CHECKED;
-
     // Reset controls state
-    if (bProcExists)
+    if (_exProc.checked())
     {
         _procCmdLine.disable();
         _procList.enable();
         _threadList.enable();
+        _selectProc.disable();
     }
     else
     {
-        _procCmdLine.enable();
+        _autoProc.checked() ? _procCmdLine.disable() : _procCmdLine.enable();
         _procList.disable();
         _threadList.disable();
+        _selectProc.enable();
     }
 
     _exProc.enable();
@@ -301,12 +268,11 @@ DWORD MainDlg::SetMapMode( MapMode mode )
     _autoProc.enable();
     _initFuncList.enable();
     _initArg.enable();
+    _unlink.enable();
 
     switch (mode)
     {
         case Normal:
-            _unlink.enable();
-
             _mmapOptions.manualInmport.disable();
             _mmapOptions.addLdrRef.disable();
             _mmapOptions.wipeHeader.disable();
@@ -334,7 +300,6 @@ DWORD MainDlg::SetMapMode( MapMode mode )
         case Kernel_DriverMap:
             _threadList.selection( 0 );
             _threadList.disable();
-            _unlink.disable();
 
             _mmapOptions.manualInmport.disable();
             _mmapOptions.addLdrRef.disable();
@@ -345,6 +310,7 @@ DWORD MainDlg::SetMapMode( MapMode mode )
 
             if (mode == Kernel_DriverMap)
             {
+                _unlink.disable();
                 _initFuncList.selectedText( L"" );
                 _initFuncList.disable();
                 _initArg.reset();
@@ -354,6 +320,7 @@ DWORD MainDlg::SetMapMode( MapMode mode )
                 _autoProc.disable();
                 _procCmdLine.disable();
                 _procList.disable();
+                _selectProc.disable();
             }
 
             break;
@@ -363,4 +330,35 @@ DWORD MainDlg::SetMapMode( MapMode mode )
     }
 
     return ERROR_SUCCESS;
+}
+
+/// <summary>
+/// Select executable image via file selection dialog
+/// </summary>
+/// <param name="selectedPath">Selected path</param>
+/// <returns>true if image was selected, false if canceled</returns>
+bool MainDlg::SelectExecutable( std::wstring& selectedPath )
+{
+    OPENFILENAMEW ofn = { 0 };
+    wchar_t path[MAX_PATH] = { 0 };
+
+    ofn.lStructSize = sizeof( ofn );
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = path;
+    ofn.lpstrFile[0] = '\0';
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0" );
+    ofn.nFilterIndex = 2;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags = OFN_PATHMUSTEXIST;
+
+    if (GetOpenFileName( &ofn ))
+    {
+        selectedPath = path;
+        return true;
+    }
+
+    return false;
 }

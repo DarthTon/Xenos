@@ -4,39 +4,39 @@
 
 INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    _hMainDlg = hDlg;
+    Dialog::OnInit( hDlg, message, wParam, lParam );
 
     //
     // Setup controls
     //
-    _procList.Attach( GetDlgItem( _hMainDlg, IDC_COMBO_PROC ) );
-    _threadList.Attach( GetDlgItem( _hMainDlg, IDC_THREADS ) );
-    _injectionType.Attach( GetDlgItem( _hMainDlg, IDC_OP_TYPE ) );
-    _initFuncList.Attach( GetDlgItem( _hMainDlg, IDC_INIT_EXPORT ) );
+    _procList.Attach( GetDlgItem( _hwnd, IDC_COMBO_PROC ) );
+    _threadList.Attach( GetDlgItem( _hwnd, IDC_THREADS ) );
+    _injectionType.Attach( GetDlgItem( _hwnd, IDC_OP_TYPE ) );
+    _initFuncList.Attach( GetDlgItem( _hwnd, IDC_INIT_EXPORT ) );
 
-    _imagePath.Attach( GetDlgItem( _hMainDlg, IDC_IMAGE_PATH ) );
-    _procCmdLine.Attach( GetDlgItem( _hMainDlg, IDC_CMDLINE ) );
-    _initArg.Attach( GetDlgItem( _hMainDlg, IDC_ARGUMENT ) );
+    _imagePath.Attach( GetDlgItem( _hwnd, IDC_IMAGE_PATH ) );
+    _procCmdLine.Attach( GetDlgItem( _hwnd, IDC_CMDLINE ) );
+    _initArg.Attach( GetDlgItem( _hwnd, IDC_ARGUMENT ) );
 
-    _exProc.Attach( GetDlgItem( _hMainDlg, IDC_EXISTING_PROC ) );
-    _newProc.Attach( GetDlgItem( _hMainDlg, IDC_NEW_PROC ) );
-    _autoProc.Attach( GetDlgItem( _hMainDlg, IDC_AUTO_PROC ) );
+    _exProc.Attach( GetDlgItem( _hwnd, IDC_EXISTING_PROC ) );
+    _newProc.Attach( GetDlgItem( _hwnd, IDC_NEW_PROC ) );
+    _autoProc.Attach( GetDlgItem( _hwnd, IDC_AUTO_PROC ) );
 
-    _injClose.Attach( GetDlgItem( _hMainDlg, IDC_INJ_CLOSE ) );
+    _selectProc.Attach( GetDlgItem( _hwnd, IDC_SELECT_PROC ) );
+    _injClose.Attach( GetDlgItem( _hwnd, IDC_INJ_CLOSE ) );
+    _unlink.Attach( GetDlgItem( _hwnd, IDC_UNLINK ) );
 
-    _unlink.Attach( GetDlgItem( _hMainDlg, IDC_UNLINK ) );
-
-    _mmapOptions.addLdrRef.Attach( GetDlgItem( _hMainDlg, IDC_LDR_REF ) );
-    _mmapOptions.manualInmport.Attach( GetDlgItem( _hMainDlg, IDC_MANUAL_IMP ) );
-    _mmapOptions.noTls.Attach( GetDlgItem( _hMainDlg, IDC_IGNORE_TLS ) );
-    _mmapOptions.noExceptions.Attach( GetDlgItem( _hMainDlg, IDC_NOEXCEPT ) );
-    _mmapOptions.wipeHeader.Attach( GetDlgItem( _hMainDlg, IDC_WIPE_HDR ) );
-    _mmapOptions.hideVad.Attach( GetDlgItem( _hMainDlg, IDC_HIDEVAD ) );
+    _mmapOptions.addLdrRef.Attach( GetDlgItem( _hwnd, IDC_LDR_REF ) );
+    _mmapOptions.manualInmport.Attach( GetDlgItem( _hwnd, IDC_MANUAL_IMP ) );
+    _mmapOptions.noTls.Attach( GetDlgItem( _hwnd, IDC_IGNORE_TLS ) );
+    _mmapOptions.noExceptions.Attach( GetDlgItem( _hwnd, IDC_NOEXCEPT ) );
+    _mmapOptions.wipeHeader.Attach( GetDlgItem( _hwnd, IDC_WIPE_HDR ) );
+    _mmapOptions.hideVad.Attach( GetDlgItem( _hwnd, IDC_HIDEVAD ) );
 
     _mmapOptions.hideVad.disable();
 
     // Set dialog title
-    SetWindowTextW( _hMainDlg, blackbone::Utils::RandomANString().c_str() );
+    SetWindowTextW( _hwnd, blackbone::Utils::RandomANString().c_str() );
 
     // Fill injection types
     _injectionType.Add( L"Native inject", Normal );
@@ -51,7 +51,7 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 
         _mmapOptions.hideVad.enable();
 
-        EnableMenuItem( GetMenu( _hMainDlg ), ID_TOOLS_PROTECT, MF_ENABLED );
+        EnableMenuItem( GetMenu( _hwnd ), ID_TOOLS_PROTECT, MF_ENABLED );
     }
 
     _injectionType.selection( 0 );
@@ -73,21 +73,11 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     return TRUE;
 }
 
-INT_PTR MainDlg::OnCommand( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    if (_events.count( LOWORD( wParam ) ))
-        return (this->*_events[LOWORD( wParam )])(hDlg, message, wParam, lParam);
-
-    if (_events.count( HIWORD( wParam ) ))
-        return (this->*_events[HIWORD( wParam )])(hDlg, message, wParam, lParam);
-    
-    return FALSE;
-}
 
 INT_PTR MainDlg::OnClose( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     SaveConfig();
-    return EndDialog( hDlg, 0 );
+    return Dialog::OnClose( hDlg, message, wParam, lParam );
 }
 
 
@@ -121,7 +111,7 @@ INT_PTR MainDlg::OnSelChange( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
     // Injection type selection
     else if (LOWORD( wParam ) == IDC_OP_TYPE)
     {
-        SetMapMode( (MapMode)_injectionType.selection() );
+        UpdateInterface( (MapMode)_injectionType.selection() );
     }
 
     return TRUE;
@@ -174,7 +164,8 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     ctx.imagePath = _imagePath.text();
     ctx.initRoutine = blackbone::Utils::WstringToAnsi( _initFuncList.selectedText() );
     ctx.initRoutineArg = _initArg.text();
-    ctx.mode = (MapMode)_injectionType.selection();
+    ctx.procMode = (_exProc.checked() ? Existing : (_newProc.checked() ? NewProcess : ManualLaunch));
+    ctx.injectMode = (MapMode)_injectionType.selection();
     ctx.pid = _procList.itemData( _procList.selection() );
     ctx.procCmdLine = _procCmdLine.text();
     ctx.procPath = _processPath;
@@ -182,6 +173,13 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     ctx.unlinkImage = _unlink;
 
     _core.DoInject( ctx );
+
+    // Show wait dialog
+    if (ctx.procMode == ManualLaunch)
+    {
+        DlgWait dlgWait( _core );
+        dlgWait.RunModal( hDlg );
+    }
 
     // Close after successful injection
     if (_injClose.checked())
@@ -192,7 +190,7 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
             if (pDlg->_core.WaitOnInjection() == ERROR_SUCCESS)
             {
                 pDlg->SaveConfig();
-                ::EndDialog( pDlg->_hMainDlg, 0 );
+                ::EndDialog( pDlg->_hwnd, 0 );
             }
 
             return 0;
@@ -204,72 +202,22 @@ INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     return TRUE;
 }
 
-INT_PTR MainDlg::OnExProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+INT_PTR MainDlg::OnExistingProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    _procList.reset();
-    _procList.enable();
-
-    return TRUE;
-
-}
-
-
-INT_PTR MainDlg::OnNewProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    OPENFILENAMEW ofn = { 0 };
-    wchar_t path[MAX_PATH] = { 0 };
-
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFile = path;
-    ofn.lpstrFile[0] = '\0';
-    ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0" );
-    ofn.nFilterIndex = 2;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST;
-
-    _procList.reset();
-    _procList.disable();
-
-    if (GetOpenFileName( &ofn ))
-    {
-        SetActiveProcess( 0, ofn.lpstrFile );
-    }
-
+    UpdateInterface( (MapMode)_injectionType.selection() );
     return TRUE;
 }
 
-INT_PTR MainDlg::OnAutoProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+INT_PTR MainDlg::OnSelectExecutable( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    OPENFILENAMEW ofn = { 0 };
-    wchar_t path[MAX_PATH] = { 0 };
+    std::wstring path;
+    if (SelectExecutable( path ))
+        SetActiveProcess( 0, path );
 
-    ofn.lStructSize = sizeof( ofn );
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFile = path;
-    ofn.lpstrFile[0] = '\0';
-    ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0" );
-    ofn.nFilterIndex = 2;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST;
-
-    _procList.reset();
-    _procList.disable();
-
-    if (GetOpenFileName( &ofn ))
-    {
-        SetActiveProcess( 0, ofn.lpstrFile );
-    }
+    UpdateInterface( (MapMode)_injectionType.selection() );
 
     return TRUE;
 }
-
 
 INT_PTR MainDlg::OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
@@ -333,5 +281,6 @@ INT_PTR MainDlg::OnEjectModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM 
         return TRUE;
     }
 
-    return DialogBox( GetModuleHandle( NULL ), MAKEINTRESOURCEW( IDD_MODULES ), _hMainDlg, &ModulesDlg::DlgProcModules );
+    ModulesDlg dlg( _core.process() );
+    return dlg.RunModal( hDlg );
 }

@@ -37,7 +37,7 @@ MENU IDR_MENU_MAIN
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     PUSHBUTTON      "Inject",IDC_EXECUTE,7,347,231,32,BS_FLAT
-    COMBOBOX        IDC_COMBO_PROC,75,58,157,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBO_PROC,75,58,122,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Process selection",IDC_STATIC,12,60,56,8
     PUSHBUTTON      "...",IDC_LOAD_IMG,212,98,20,14
     LTEXT           "Image",IDC_STATIC,47,101,21,8
@@ -46,8 +46,8 @@ BEGIN
     COMBOBOX        IDC_INIT_EXPORT,75,120,157,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Injection type",IDC_STATIC,22,21,46,8
     COMBOBOX        IDC_OP_TYPE,75,19,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Context thread",IDC_STATIC,17,234,50,8
-    COMBOBOX        IDC_THREADS,76,233,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Context thread",IDC_STATIC,17,232,50,8
+    COMBOBOX        IDC_THREADS,76,231,157,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "Add loader reference",IDC_LDR_REF,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,275,84,10
     CONTROL         "Manually resolve imports",IDC_MANUAL_IMP,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,295,95,10
     CONTROL         "Wipe headers",IDC_WIPE_HDR,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,315,60,10
@@ -56,8 +56,8 @@ BEGIN
     EDITTEXT        IDC_ARGUMENT,75,140,157,14,ES_AUTOHSCROLL
     CONTROL         "Ignore TLS",IDC_IGNORE_TLS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,275,51,10
     CONTROL         "No exception support",IDC_NOEXCEPT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,295,85,10
-    GROUPBOX        "Native loader options",IDC_STATIC,7,190,231,69
-    CONTROL         "Unlink module",IDC_UNLINK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,209,59,10
+    GROUPBOX        "Native loader options",IDC_STATIC,7,188,231,69
+    CONTROL         "Unlink module",IDC_UNLINK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,207,59,10
     LTEXT           "Command line",IDC_STATIC,23,83,45,8
     EDITTEXT        IDC_CMDLINE,75,77,157,14,ES_AUTOHSCROLL
     CONTROL         "Conceal memory",IDC_HIDEVAD,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,140,315,69,10
@@ -67,6 +67,7 @@ BEGIN
     CONTROL         "Existing",IDC_EXISTING_PROC,"Button",BS_AUTORADIOBUTTON,75,41,41,10
     CONTROL         "New",IDC_NEW_PROC,"Button",BS_AUTORADIOBUTTON,129,41,30,10
     CONTROL         "Manual launch",IDC_AUTO_PROC,"Button",BS_AUTORADIOBUTTON,172,41,61,10
+    PUSHBUTTON      "Select",IDC_SELECT_PROC,201,57,31,14
 END
 
 IDD_MODULES DIALOGEX 0, 0, 265, 257
@@ -81,11 +82,11 @@ END
 
 IDD_WAIT_PROC DIALOGEX 0, 0, 219, 71
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Dialog"
+CAPTION "Waiting..."
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     PUSHBUTTON      "Cancel",ID_WAIT_CANCEL,162,50,50,14
-    CONTROL         "",IDC_WAIT_BAR,"msctls_progress32",WS_BORDER,7,23,205,15
+    CONTROL         "",IDC_WAIT_BAR,"msctls_progress32",PBS_MARQUEE | WS_BORDER,7,23,205,15
     CTEXT           "Static",IDC_WAIT_TEXT,7,9,205,8
 END
 
@@ -155,8 +156,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,2,1,0
- PRODUCTVERSION 1,2,1,0
+ FILEVERSION 1,3,0,0
+ PRODUCTVERSION 1,3,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -172,12 +173,12 @@ BEGIN
         BLOCK "040004b0"
         BEGIN
             VALUE "FileDescription", "PE injector"
-            VALUE "FileVersion", "1.2.1.0"
+            VALUE "FileVersion", "1.3.0.0"
             VALUE "InternalName", "Xenos.exe"
             VALUE "LegalCopyright", "Copyright (C) 2014"
             VALUE "OriginalFilename", "Xenos.exe"
             VALUE "ProductName", "Xenos"
-            VALUE "ProductVersion", "1.2.1.0"
+            VALUE "ProductVersion", "1.3.0.0"
         END
     END
     BLOCK "VarFileInfo"

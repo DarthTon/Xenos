@@ -1,41 +1,26 @@
 #include "DlgModules.h"
-
 #include "Message.hpp"
 
-ModulesDlg* pInstance = nullptr;
 
 ModulesDlg::ModulesDlg( blackbone::Process& proc )
-    :_process( proc )
+    : Dialog( IDD_MODULES )
+    , _process( proc )
 {
-    pInstance = this;
+    _messages[WM_INITDIALOG]   = static_cast<Dialog::fnDlgProc>(&ModulesDlg::OnInit);
 
-    Messages[WM_INITDIALOG] = &ModulesDlg::OnInit;
-    Messages[WM_COMMAND]    = &ModulesDlg::OnCommand;
-    Messages[WM_CLOSE]      = &ModulesDlg::OnClose;
-
-    Events[IDC_BUTTON_CLOSE]  = &ModulesDlg::OnCloseBtn;
-    Events[IDC_BUTTON_UNLOAD] = &ModulesDlg::OnUnload;
+    _events[IDC_BUTTON_CLOSE]  = static_cast<Dialog::fnDlgProc>(&ModulesDlg::OnCloseBtn);
+    _events[IDC_BUTTON_UNLOAD] = static_cast<Dialog::fnDlgProc>(&ModulesDlg::OnUnload);
 }
 
 ModulesDlg::~ModulesDlg()
 {
-
-}
-
-
-INT_PTR CALLBACK ModulesDlg::DlgProcModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    if (pInstance->Messages.find( message ) != pInstance->Messages.end( ))
-        return (pInstance->*pInstance->Messages[message])(hDlg, message, wParam, lParam);
-
-    return 0;
 }
 
 INT_PTR ModulesDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    LVCOLUMNW lvc = { 0 };
-    _hDlg = hDlg;
+    Dialog::OnInit( hDlg, message, wParam, lParam );
 
+    LVCOLUMNW lvc = { 0 };
     _modList.Attach( GetDlgItem( hDlg, IDC_LIST_MODULES ) );
 
     ListView_SetExtendedListViewStyle( _modList.hwnd(), LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER );
@@ -53,22 +38,6 @@ INT_PTR ModulesDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     return TRUE;
 }
 
-INT_PTR ModulesDlg::OnCommand( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    if (Events.count( LOWORD( wParam ) ))
-        return (this->*Events[LOWORD( wParam )])(hDlg, message, wParam, lParam);
-
-    if (Events.count( HIWORD( wParam ) ))
-        return (this->*Events[HIWORD( wParam )])(hDlg, message, wParam, lParam);
-
-    return FALSE;
-}
-
-INT_PTR ModulesDlg::OnClose( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    EndDialog( hDlg, 0 );
-    return TRUE;
-}
 
 INT_PTR ModulesDlg::OnCloseBtn( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {

@@ -1,46 +1,46 @@
 #include "DlgWait.h"
-
-DlgWait* pInstance = nullptr;
+#include <thread>
 
 DlgWait::DlgWait( InjectionCore& injection )
-    : _injection( injection )
+    : Dialog( IDD_WAIT_PROC )
+    , _injection( injection )
 {
-    pInstance = this;
+    _events[ID_WAIT_CANCEL] = static_cast<Dialog::fnDlgProc>(&DlgWait::OnCloseBtn);
 }
-
 
 DlgWait::~DlgWait()
 {
 }
 
-INT_PTR CALLBACK DlgWait::DlgProcWait( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    if (pInstance->Messages.find( message ) != pInstance->Messages.end())
-        return (pInstance->*pInstance->Messages[message])(hDlg, message, wParam, lParam);
-
-    return 0;
-}
-
 INT_PTR DlgWait::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    _hDlg = hDlg;
+    Dialog::OnInit( hDlg, message, wParam, lParam );
+    auto& context = _injection.lastContext();
+    std::wstring text = L"Awaiting '" + blackbone::Utils::StripPath( context.procPath ) + L"' launch...";
+    
+    Static_SetText( GetDlgItem( hDlg, IDC_WAIT_TEXT ), text.c_str() );
+    SendMessage( GetDlgItem( hDlg, IDC_WAIT_BAR ), PBM_SETMARQUEE, (WPARAM)TRUE, (LPARAM)30 );
+
+    // Wait for injection
+    std::thread( &DlgWait::WaitForInjection, this ).detach();
+
     return TRUE;
 }
 
-INT_PTR DlgWait::OnCommand( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+INT_PTR DlgWait::OnCloseBtn( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-
-    if (Events.count( LOWORD( wParam ) ))
-        return (this->*Events[LOWORD( wParam )])(hDlg, message, wParam, lParam);
-
-    if (Events.count( HIWORD( wParam ) ))
-        return (this->*Events[HIWORD( wParam )])(hDlg, message, wParam, lParam);
-
-    return FALSE;
+    _injection.StopWait();
+    return Dialog::OnClose( hDlg, message, wParam, lParam );
 }
 
-INT_PTR DlgWait::OnClose( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+/// <summary>
+/// Wait for injection
+/// </summary>
+/// <returns>Error code</returns>
+DWORD DlgWait::WaitForInjection()
 {
-    EndDialog( hDlg, 0 );
-    return TRUE;
+    DWORD code = _injection.WaitOnInjection();
+
+    EndDialog( _hwnd, 0 );
+    return code;
 }

@@ -20,9 +20,9 @@ enum MapMode
 
 enum ProcMode
 {
-    Existing = 0,
-    NewProcess,
-    ManualLaunch,
+    Existing = 0,       // Inject into existing process
+    NewProcess,         // Create and inject
+    ManualLaunch,       // Await process start and inject
 };
 
 /// <summary>
@@ -30,9 +30,10 @@ enum ProcMode
 /// </summary>
 struct InjectContext
 {
-    DWORD pid = 0;                                          // Target process ID or 0 for new process
+    DWORD pid = 0;                                          // Target process ID
     DWORD threadID = 0;                                     // Context thread ID
-    MapMode mode = Normal;                                  // Injection type
+    ProcMode procMode = Existing;                           // Process launch mode
+    MapMode injectMode = Normal;                            // Injection type
     blackbone::eLoadFlags flags = blackbone::NoFlags;       // Manual map flags
     bool unlinkImage = false;                               // Set to true to unlink image after injection
 
@@ -56,11 +57,12 @@ public:
     ~InjectionCore();
 
     /// <summary>
-    /// Attach to selected process
+    /// Get injection target
     /// </summary>
-    /// <param name="pid">The pid.</param>
+    /// <param name="context">Injection context.</param>
+    /// <param name="pi">Process info in case of new process</param>
     /// <returns>Error code</returns>
-    DWORD CreateOrAttach( DWORD pid, InjectContext& context, PROCESS_INFORMATION& pi );
+    DWORD GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi );
 
     /// <summary>
     /// Load selected image and do some validation
@@ -82,6 +84,11 @@ public:
     /// </summary>
     /// <returns>Injection status</returns>
     DWORD WaitOnInjection();
+
+    /// <summary>
+    /// Stops waiting for process
+    /// </summary>
+    inline void StopWait(){ _waitActive = false; }
 
     inline blackbone::Process& process() { return _proc; }
     inline InjectContext& lastContext() { return _context; }
@@ -163,5 +170,6 @@ private:
     InjectContext          _context;
     HWND&                  _hMainDlg;
     HANDLE                 _lastThread = NULL;
+    bool                   _waitActive = false;
 };
 

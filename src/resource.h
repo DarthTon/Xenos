@@ -37,8 +37,9 @@
 #define IDC_WAIT_TEXT                   1017
 #define IDC_INJ_CLOSE                   1018
 #define ID_WAIT_CANCEL                  1018
-#define IDC_EXISTING                    1019
 #define IDC_EXISTING_PROC               1019
+#define IDC_BUTTON1                     1020
+#define IDC_SELECT_PROC                 1020
 #define IDC_AUTO_PROC                   1021
 #define ID_TOOLS_EJECTMODULES           32772
 #define ID_TOOLS_PROTECTSELF            32773
@@ -52,7 +53,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        140
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1020
+#define _APS_NEXT_CONTROL_VALUE         1021
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

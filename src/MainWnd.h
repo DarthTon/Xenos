@@ -1,6 +1,5 @@
 #pragma once
 
-#include "stdafx.h"
 #include "resource.h"
 #include "DlgModules.h"
 #include "DlgWait.h"
@@ -11,36 +10,12 @@
 #include "Message.hpp"
 #include "InjectionCore.h"
 
-class MainDlg
+class MainDlg : public Dialog
 {
-    typedef INT_PTR( MainDlg::*fnDialogProc )(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-
-    typedef std::map<UINT, fnDialogProc> mapMsgProc;
-    typedef std::map<WORD, fnDialogProc> mapCtrlProc;
 
 public:
-    ~MainDlg();
-
-    /// <summary>
-    /// Get singleton instance
-    /// </summary>
-    /// <returns>Main dialog instance</returns>
-    static MainDlg& Instance();
-
-    /// <summary>
-    /// Run GUI
-    /// </summary>
-    INT_PTR Run();
-
-    /// <summary>
-    /// Dialog message handler
-    /// </summary>
-    static INT_PTR CALLBACK DlgProcMain( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-
-private:
     MainDlg();
-    MainDlg( MainDlg& root );
-    MainDlg& operator=(MainDlg&);
+    ~MainDlg();
 
 private:
     /// <summary>
@@ -89,35 +64,36 @@ private:
     DWORD MmapFlags( blackbone::eLoadFlags flags );
 
     /// <summary>
-    /// Set injection method
+    /// Update interface controls
     /// </summary>
     /// <param name="mode">Injection mode</param>
     /// <returns>Error code</returns>
-    DWORD SetMapMode( MapMode mode );
+    DWORD UpdateInterface( MapMode mode );
 
-    //////////////////////////////////////////////////////////////////////////////////
-    INT_PTR OnInit          ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam ); 
-    INT_PTR OnCommand( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnClose         ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    //////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////
-    INT_PTR OnFileExit      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnLoadImage     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnExecute       ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnDropDown      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnSelChange     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnDragDrop      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnExProcess     ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnNewProcess    ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnAutoProcess   ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnEjectModules  ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    INT_PTR OnProtectSelf   ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    //////////////////////////////////////////////////////////////////////////////////
+    /// <summary>
+    /// Select executable image via file selection dialog
+    /// </summary>
+    /// <param name="selectedPath">Selected path</param>
+    /// <returns>true if image was selected, false if canceled</returns>
+    bool SelectExecutable( std::wstring& selectedPath );
+
+    //
+    // Message handlers
+    //
+    MSG_HANDLER( OnInit );
+    MSG_HANDLER( OnClose );
+    MSG_HANDLER( OnFileExit );
+    MSG_HANDLER( OnLoadImage );
+    MSG_HANDLER( OnSelectExecutable );
+    MSG_HANDLER( OnExecute );
+    MSG_HANDLER( OnDropDown );
+    MSG_HANDLER( OnSelChange );
+    MSG_HANDLER( OnDragDrop );
+    MSG_HANDLER( OnExistingProcess );
+    MSG_HANDLER( OnEjectModules );
+    MSG_HANDLER( OnProtectSelf );
 
 private:
-    HWND          _hMainDlg = NULL;
-    mapMsgProc    _messages;
-    mapCtrlProc   _events;
     InjectionCore _core;
     ConfigMgr     _config;
     std::wstring  _processPath;
@@ -139,10 +115,9 @@ private:
     ctrl::Button _exProc;           // Existing process radio-button
     ctrl::Button _newProc;          // New process radio-button
     ctrl::Button _autoProc;         // Manual launch radio-button
-
-    ctrl::Button _injClose;       // Close application after injection
-
-    ctrl::Button _unlink;         // Unlink image after injection   
+    ctrl::Button _selectProc;       // Select process path
+    ctrl::Button _injClose;         // Close application after injection
+    ctrl::Button _unlink;           // Unlink image after injection   
 
     struct
     {
