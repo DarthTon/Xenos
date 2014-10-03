@@ -9,30 +9,37 @@ class Message
         Error,
         Warning,
         Info,
+        Question,
     };
 
 public:
     static void ShowError( HWND parent, const std::wstring& msg, const std::wstring& title = L"Error" )
     {
-        return Show( msg, title, Error, parent );
+        Show( msg, title, Error, parent );
     }
 
     static void ShowWarning( HWND parent, const std::wstring& msg, const std::wstring& title = L"Warning" )
     {
-        return Show( msg, title, Warning, parent );
+        Show( msg, title, Warning, parent );
     }
 
     static void ShowInfo( HWND parent, const std::wstring& msg, const std::wstring& title = L"Info" )
     {
-        return Show( msg, title, Info, parent );
+        Show( msg, title, Info, parent );
+    }
+
+    static bool ShowQuestion( HWND parent, const std::wstring& msg, const std::wstring& title = L"Question" )
+    {
+        return Show( msg, title, Question, parent ) == IDYES;
     }
 
 private:
-    static void Show( 
+    static int Show( 
         const std::wstring& msg, 
         const std::wstring& title, 
         MsgType type, 
-        HWND parent = NULL )
+        HWND parent = NULL 
+        )
     {
         UINT uType = MB_ICONERROR;
 
@@ -40,7 +47,9 @@ private:
             uType = MB_ICONWARNING;
         else if (type == Info)
             uType = MB_ICONINFORMATION;
+        else if (type == Question)
+            uType = MB_YESNO | MB_ICONQUESTION;
 
-        MessageBoxW( parent, msg.c_str(), title.c_str(), uType );
+        return MessageBoxW( parent, msg.c_str(), title.c_str(), uType );
     }
 };

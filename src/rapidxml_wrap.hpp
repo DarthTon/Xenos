@@ -281,6 +281,16 @@ namespace acut
             return string_t(node_->name(), node_->name_size());
         }
 
+        string_t value()
+        {
+            return string_t( node_->value() );
+        }
+
+        void value(const string_t& val)
+        {
+            node_->value(val.c_str());
+        }
+
     private:
         class Path
         {

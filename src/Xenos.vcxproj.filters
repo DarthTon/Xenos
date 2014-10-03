@@ -5,17 +5,8 @@
     <ClCompile Include="DlgModules.cpp">
       <Filter>Interface\ModuleView</Filter>
     </ClCompile>
-    <ClCompile Include="MainWnd.cpp">
-      <Filter>Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="Dlg_Funcs.cpp">
-      <Filter>Interface</Filter>
-    </ClCompile>
     <ClCompile Include="FileUtil.cpp">
       <Filter>Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="ConfigMgr.cpp">
-      <Filter>Config</Filter>
     </ClCompile>
     <ClCompile Include="InjectionCore.cpp">
       <Filter>Core</Filter>
@@ -28,6 +19,15 @@
     </ClCompile>
     <ClCompile Include="DumpHandler.cpp">
       <Filter>Dump</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgSettings.cpp">
+      <Filter>Interface\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="MainDlg.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="ProfileMgr.cpp">
+      <Filter>Config</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -42,9 +42,6 @@
     </ClInclude>
     <ClInclude Include="DlgModules.h">
       <Filter>Interface\ModuleView</Filter>
-    </ClInclude>
-    <ClInclude Include="MainWnd.h">
-      <Filter>Interface</Filter>
     </ClInclude>
     <ClInclude Include="rapidxml_wrap.hpp">
       <Filter>XML</Filter>
@@ -66,9 +63,6 @@
     </ClInclude>
     <ClInclude Include="FileUtil.h">
       <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="ConfigMgr.h">
-      <Filter>Config</Filter>
     </ClInclude>
     <ClInclude Include="ComboBox.hpp">
       <Filter>Interface\Controls</Filter>
@@ -102,6 +96,18 @@
     </ClInclude>
     <ClInclude Include="DumpHandler.h">
       <Filter>Dump</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgSettings.h">
+      <Filter>Interface\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="MainDlg.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="ProfileMgr.h">
+      <Filter>Config</Filter>
+    </ClInclude>
+    <ClInclude Include="StatusBar.hpp">
+      <Filter>Interface\Controls</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +144,9 @@
     <Filter Include="Dump">
       <UniqueIdentifier>{045106fa-fca8-4b9d-a670-5e01f6707aa9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Interface\Settings">
+      <UniqueIdentifier>{0db25773-59d9-487d-9d9f-3f3df6d3a096}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Xenos.rc">
@@ -148,5 +157,19 @@
     <Image Include="alien.ico">
       <Filter>Resources</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys">
+      <Filter>Resources</Filter>
+    </None>
   </ItemGroup>
 </Project>

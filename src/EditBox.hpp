@@ -19,6 +19,8 @@ public:
         return buf;
     }
 
+    virtual inline long integer()  { return std::wcstol( text().c_str(), nullptr, 10 ); }
+
     virtual inline BOOL text( const std::wstring& text ) const { return Edit_SetText( _hwnd, text.c_str() ); }
 
     virtual inline void reset() { Edit_SetText( _hwnd, L"" ); }

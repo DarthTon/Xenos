@@ -186,24 +186,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ConfigMgr.cpp" />
+    <ClCompile Include="ProfileMgr.cpp" />
+    <ClCompile Include="DlgSettings.cpp" />
     <ClCompile Include="DlgWait.cpp" />
-    <ClCompile Include="Dlg_Funcs.cpp" />
     <ClCompile Include="DumpHandler.cpp" />
     <ClCompile Include="FileUtil.cpp" />
     <ClCompile Include="InjectionCore.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="MainWnd.cpp" />
+    <ClCompile Include="MainDlg.cpp" />
     <ClCompile Include="Routines.cpp" />
     <ClCompile Include="DlgModules.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Button.hpp" />
     <ClInclude Include="ComboBox.hpp" />
-    <ClInclude Include="ConfigMgr.h" />
+    <ClInclude Include="ProfileMgr.h" />
     <ClInclude Include="Control.hpp" />
     <ClInclude Include="Dialog.hpp" />
     <ClInclude Include="DlgModules.h" />
+    <ClInclude Include="DlgSettings.h" />
     <ClInclude Include="DlgWait.h" />
     <ClInclude Include="DumpHandler.h" />
     <ClInclude Include="EditBox.hpp" />
@@ -216,9 +217,10 @@
     <ClInclude Include="rapidxml\rapidxml_print.hpp" />
     <ClInclude Include="rapidxml\rapidxml_utils.hpp" />
     <ClInclude Include="rapidxml_wrap.hpp" />
+    <ClInclude Include="StatusBar.hpp" />
     <ClInclude Include="StringUtil.h" />
     <ClInclude Include="Targetver.h" />
-    <ClInclude Include="MainWnd.h" />
+    <ClInclude Include="MainDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Window.hpp" />
@@ -238,6 +240,12 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="alien.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys" />
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys" />
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys" />
+    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

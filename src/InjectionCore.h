@@ -7,6 +7,8 @@
 #include "../../BlackBone/src/BlackBone/PE/PEImage.h"
 #include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
+typedef std::vector<blackbone::pe::PEImage> vecPEImages;
+typedef std::vector<blackbone::pe::vecExports> vecImageExports;
 
 enum MapMode
 {
@@ -30,22 +32,23 @@ enum ProcMode
 /// </summary>
 struct InjectContext
 {
-    DWORD pid = 0;                                          // Target process ID
-    DWORD threadID = 0;                                     // Context thread ID
-    ProcMode procMode = Existing;                           // Process launch mode
-    MapMode injectMode = Normal;                            // Injection type
-    blackbone::eLoadFlags flags = blackbone::NoFlags;       // Manual map flags
-    bool unlinkImage = false;                               // Set to true to unlink image after injection
+    DWORD pid = 0;                                      // Target process ID
+    vecPEImages images;                                 // Images to inject
+    ProcMode procMode = Existing;                       // Process launch mode
+    MapMode injectMode = Normal;                        // Injection type
+    blackbone::eLoadFlags flags = blackbone::NoFlags;   // Manual map flags
+    bool hijack = false;                                // Hijack existing thread
+    bool unlinkImage = false;                           // Set to true to unlink image after injection
+    bool erasePE = false;                               // Erase PE headers after native injection
+    bool waitActive = false;                            // Process waiting state
 
-    std::wstring procPath;                                  // Process path
-    std::wstring procCmdLine;                               // Process command line
-    std::wstring imagePath;                                 // Image path
-    std::string  initRoutine;                               // Module initializer
-    std::wstring initRoutineArg;                            // Module initializer params
-   
-private:
-    friend class InjectionCore;
-    class InjectionCore* pCore = nullptr;
+    uint32_t delay = 0;                                 // Delay before injection
+    uint32_t period = 0;                                // Period between images
+
+    std::wstring procPath;                              // Process path
+    std::wstring procCmdLine;                           // Process command line
+    std::string  initRoutine;                           // Module initializer
+    std::wstring initRoutineArg;                        // Module initializer params
 };
 
 class InjectionCore
@@ -65,33 +68,19 @@ public:
     DWORD GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi );
 
     /// <summary>
-    /// Load selected image and do some validation
+    /// Inject multiple images
     /// </summary>
-    /// <param name="path">Full qualified image path</param>
-    /// <param name="exports">Image exports</param>
+    /// <param name="pCtx">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD LoadImageFile( const std::wstring& path, blackbone::pe::listExports& exports );
-
-    /// <summary>
-    /// Initiate injection process
-    /// </summary>
-    /// <param name="ctx">Injection context</param>
-    /// <returns>Error code</returns>
-    DWORD DoInject( InjectContext& ctx );
+    DWORD InjectMultiple( InjectContext* pContext );
 
     /// <summary>
     /// Waits for the injection thread to finish
     /// </summary>
     /// <returns>Injection status</returns>
-    DWORD WaitOnInjection();
+    DWORD WaitOnInjection( InjectContext& pContext );
 
-    /// <summary>
-    /// Stops waiting for process
-    /// </summary>
-    inline void StopWait(){ _waitActive = false; }
-
-    inline blackbone::Process& process() { return _proc; }
-    inline InjectContext& lastContext() { return _context; }
+    inline blackbone::Process& process() { return _process; }
 
 private:
     /// <summary>
@@ -100,43 +89,21 @@ private:
     /// <param name="init">Routine name</param>
     /// <param name="initRVA">Routine RVA, if found</param>
     /// <returns>Error code</returns>
-    DWORD ValidateInit( const std::string& init, uint32_t& initRVA );
+    DWORD ValidateInit( const std::string& init, uint32_t& initRVA, blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Validate all parameters
     /// </summary>
     /// <param name="context">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD ValidateContext( const InjectContext& context );
+    DWORD ValidateContext( InjectContext& context, const blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Injector thread worker
     /// </summary>
-    /// <param name="pCtx">Injection context</param>
-    /// <returns>Error code</returns>
-    DWORD InjectWorker( InjectContext* pCtx );
-
-    /// <summary>
-    /// Injector thread wrapper
-    /// </summary>
-    /// <param name="lpPram">Injection context</param>
-    /// <returns>Error code</returns>
-    static DWORD CALLBACK InjectWrapper( LPVOID lpParam );
-
-    /// <summary>
-    /// Kernel-mode injection
-    /// </summary>
-    /// <param name="context">Injection context</param>
-    /// <param name="mod">Resulting module</param>
-    /// <returns>Error code</returns>
-    DWORD InjectKernel( InjectContext& context, const blackbone::ModuleData* &mod, uint32_t initRVA = 0 );
-
-    /// <summary>
-    /// Manually map another system driver into system space
-    /// </summary>
     /// <param name="context">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD MapDriver( InjectContext& context );
+    DWORD InjectSingle( InjectContext& context, blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Default injection method
@@ -147,8 +114,30 @@ private:
     /// <returns>Error code</returns>
     DWORD InjectDefault(
         InjectContext& context,
+        const blackbone::pe::PEImage& img,
         blackbone::Thread* pThread,
-        const blackbone::ModuleData* &mod );
+        const blackbone::ModuleData* &mod
+        );
+
+    /// <summary>
+    /// Kernel-mode injection
+    /// </summary>
+    /// <param name="context">Injection context</param>
+    /// <param name="img">Target image</param>
+    /// <param name="initRVA">Init function RVA</param>
+    /// <returns>Error code</returns>
+    DWORD InjectionCore::InjectKernel(
+        InjectContext& context,
+        const blackbone::pe::PEImage& img,
+        uint32_t initRVA /*= 0*/
+        );
+
+    /// <summary>
+    /// Manually map another system driver into system space
+    /// </summary>
+    /// <param name="context">Injection context</param>
+    /// <returns>Error code</returns>
+    DWORD MapDriver( InjectContext& context, const blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Call initialization routine
@@ -159,17 +148,14 @@ private:
     /// <returns>Error code</returns>
     DWORD CallInitRoutine(
         InjectContext& context,
+        const blackbone::pe::PEImage& img,
         const blackbone::ModuleData* mod,
         uint64_t exportRVA,
         blackbone::Thread* pThread
         );
 
 private:
-    blackbone::Process     _proc;
-    blackbone::pe::PEImage _imagePE;
-    InjectContext          _context;
-    HWND&                  _hMainDlg;
-    HANDLE                 _lastThread = NULL;
-    bool                   _waitActive = false;
+    HWND& _hMainDlg;             // Owner dialog
+    blackbone::Process _process; // Target process
 };
 

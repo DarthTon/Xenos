@@ -1,34 +1,22 @@
-#include "MainWnd.h"
-
+#include "MainDlg.h"
 
 /// <summary>
 /// Load configuration from file
 /// </summary>
 /// <returns>Error code</returns>
-DWORD MainDlg::LoadConfig()
+DWORD MainDlg::LoadConfig( const std::wstring& path /*= L""*/ )
 {
-    ConfigMgr::ConfigData cfg;
-    if (_config.Load( cfg ))
+    auto& cfg = _profileMgr.config();
+    if (_profileMgr.Load( path ))
     {
         // Image
-        if (!cfg.imagePath.empty())
-        {
-            blackbone::pe::listExports exports;
-
-            if (_core.LoadImageFile( cfg.imagePath, exports ) == ERROR_SUCCESS)
-            {
-                _imagePath.text( cfg.imagePath );
-
-                _initFuncList.reset();
-                for (auto& exprt : exports)
-                    _initFuncList.Add( exprt.first );
-            }
-        }
+        for (auto& path : cfg.images)
+            LoadImageFile( path );
 
         // Process
         if (!cfg.procName.empty())
         {
-            if (cfg.newProcess)
+            if (cfg.processMode != Existing)
             {
                 SetActiveProcess( 0, cfg.procName );
             }
@@ -47,37 +35,38 @@ DWORD MainDlg::LoadConfig()
             }
         }
 
-        // Options
-        _procCmdLine.text( cfg.procCmdLine );
-        _initArg.text( cfg.initArgs );
-        _initFuncList.text( cfg.initRoutine );
-
-        _unlink.checked( cfg.unlink );
-        _injClose.checked( cfg.close );
-
         // Process mode
+        _exProc.checked( false );
+        _newProc.checked( false );
+        _autoProc.checked( false );
         switch (cfg.processMode)
         {
             case Existing:
                 _exProc.checked( true );
                 break;
-
             case NewProcess:
                 _newProc.checked( true );
                 break;
-
             case ManualLaunch:
                 _autoProc.checked( true );
                 break;
         }
 
-        // Injection type
-        _injectionType.selection( cfg.injectMode );
+        // Fix injection method
+        if (cfg.injectMode >= Kernel_Thread && !blackbone::Driver().loaded())
+            cfg.injectMode = Normal;
 
-        UpdateInterface( (MapMode)cfg.injectMode );
-        MmapFlags( (blackbone::eLoadFlags)cfg.manualMapFlags );
+        // Update profile name
+        if (!_defConfig.empty())
+            _status.SetText( 0, L"Profile - " + blackbone::Utils::StripPath( _defConfig ) );
+    }
+    // Default settings
+    else
+    {
+        _exProc.checked( true );
     }
 
+    UpdateInterface();
     return ERROR_SUCCESS;
 }
 
@@ -86,30 +75,20 @@ DWORD MainDlg::LoadConfig()
 /// Save Configuration.
 /// </summary>
 /// <returns>Error code</returns>
-DWORD MainDlg::SaveConfig()
+DWORD MainDlg::SaveConfig( const std::wstring& path /*= L""*/ )
 {
-    ConfigMgr::ConfigData cfg;
+    auto& cfg = _profileMgr.config();
 
-    auto thdId = _threadList.itemData( _threadList.selection() );
+    cfg.procName = _processPath;
+    cfg.images.clear();
+    for (auto& img : _images)
+        cfg.images.emplace_back( img.path() );
 
-    cfg.newProcess     = _procList.itemData( _procList.selection() ) == 0;
-    cfg.procName       = _processPath;
-    cfg.imagePath      = _imagePath.text();
-    cfg.procCmdLine    = _procCmdLine.text();
-    cfg.initRoutine    = _initFuncList.selectedText();
-    cfg.initArgs       = _initArg.text();
-    cfg.processMode    = (_exProc ? Existing : (_newProc ? NewProcess : ManualLaunch));
-    cfg.injectMode     = _injectionType.selection();
-    cfg.threadHijack   = (thdId != 0 && thdId != 0xFFFFFFFF);
-    cfg.manualMapFlags = MmapFlags();
-    cfg.unlink         = _unlink.checked();
-    cfg.close          = _injClose.checked();
+    cfg.processMode = (_exProc ? Existing : (_newProc ? NewProcess : ManualLaunch));
 
-    _config.Save( cfg );
-
+    _profileMgr.Save( path );
     return ERROR_SUCCESS;
 }
-
 
 /// <summary>
 /// Enumerate processes
@@ -134,29 +113,6 @@ DWORD MainDlg::FillProcessList()
 }
 
 /// <summary>
-/// Retrieve process threads
-/// </summary>
-/// <param name="pid">Process ID</param>
-/// <returns>Error code</returns>
-DWORD MainDlg::FillThreads( DWORD pid )
-{
-    _threadList.reset();
-    _threadList.Add( L"New Thread" );
-
-    std::vector<blackbone::ProcessInfo> found;
-    blackbone::Process::EnumByNameOrPID( pid, L"", found, true );
-    if (found.empty())
-        return ERROR_NOT_FOUND;
-
-    for (auto& thd : found.front().threads)
-        _threadList.Add( std::to_wstring( thd.tid ) + (thd.mainThread ? L" (Main)" : L""), thd.tid );
-
-    _threadList.selection( 0 );
-
-    return ERROR_SUCCESS;
-}
-
-/// <summary>
 /// Set current process
 /// </summary>
 /// <param name="pid">Target PID</param>
@@ -165,169 +121,106 @@ DWORD MainDlg::FillThreads( DWORD pid )
 DWORD MainDlg::SetActiveProcess( DWORD pid, const std::wstring& path )
 {
     _processPath = path;
-
     if (pid == 0)
     {
         // Update process list
         _procList.reset();
         _procList.Add( blackbone::Utils::StripPath( path ), 0 );
         _procList.selection( 0 );
-
-        // Enable command line options field
-        _procCmdLine.enable();
-        _threadList.reset();
-    }
-    else
-    {
-        FillThreads( pid );
-
-        // Disable command line option field
-        _procCmdLine.disable();
     }
 
     return ERROR_SUCCESS;
 }
 
-
 /// <summary>
-/// Get manual map flags from interface
+/// Async inject routine
 /// </summary>
-/// <returns>Flags</returns>
-blackbone::eLoadFlags MainDlg::MmapFlags()
+void MainDlg::Inject()
 {
-    blackbone::eLoadFlags flags = blackbone::NoFlags;
+    InjectContext context;
+    auto& cfg = _profileMgr.config();
+    DWORD result = 0;
 
-    if (_mmapOptions.manualInmport)
-        flags |= blackbone::ManualImports;
+    // Fill in context
+    context.flags = (blackbone::eLoadFlags)cfg.manualMapFlags;
+    context.images = _images;
+    context.initRoutine = blackbone::Utils::WstringToAnsi( cfg.initRoutine );
+    context.initRoutineArg = cfg.initArgs;
+    context.procMode = (ProcMode)cfg.processMode;
+    context.injectMode = (MapMode)cfg.injectMode;
+    context.pid = _procList.itemData( _procList.selection() );
+    context.procCmdLine = cfg.procCmdLine;
+    context.procPath = _processPath;
+    context.hijack = cfg.hijack;
+    context.unlinkImage = cfg.unlink;
+    context.erasePE = cfg.erasePE;
+    context.delay = cfg.delay;
+    context.period = cfg.period;
 
-    if (_mmapOptions.addLdrRef)
-        flags |= blackbone::CreateLdrRef;
+    _status.SetText( 2, L"Injecting..." );
 
-    if (_mmapOptions.wipeHeader)
-        flags |= blackbone::WipeHeader;
+    // Show wait dialog
+    if (context.procMode == ManualLaunch)
+    {
+        DlgWait dlgWait( _core, context );
+        dlgWait.RunModal( _hwnd );
+        result = dlgWait.status();
+    }
+    else
+    {
+        result = _core.InjectMultiple( &context );
+    }
 
-    if (_mmapOptions.noTls)
-        flags |= blackbone::NoTLS;
+    // Close after successful injection
+    if (cfg.close && result == ERROR_SUCCESS)
+    {
+        SaveConfig();
+        CloseDialog();
 
-    if (_mmapOptions.noExceptions)
-        flags |= blackbone::NoExceptions;
+        // Somehow main thread still waits on GetMessage indefinitely after dialog destruction...
+        TerminateProcess( GetCurrentProcess(), 0 );
+        return;
+    }
 
-    if (_mmapOptions.hideVad && blackbone::Driver().loaded())
-        flags |= blackbone::HideVAD;
-
-    return flags;
+    _status.SetText( 2, L"Idle" );
 }
-
-/// <summary>
-/// Update interface manual map flags
-/// </summary>
-/// <param name="flags">Flags</param>
-/// <returns>Flags</returns>
-DWORD MainDlg::MmapFlags( blackbone::eLoadFlags flags )
-{
-    // Exclude HideVAD if no driver present
-    if (!blackbone::Driver().loaded())
-        flags &= ~blackbone::HideVAD;
-
-    _mmapOptions.manualInmport.checked( flags & blackbone::ManualImports ? true : false );
-    _mmapOptions.addLdrRef.checked( flags & blackbone::CreateLdrRef ? true : false );
-    _mmapOptions.wipeHeader.checked( flags & blackbone::WipeHeader ? true : false );
-    _mmapOptions.noTls.checked( flags & blackbone::NoTLS ? true : false );
-    _mmapOptions.noExceptions.checked( flags & blackbone::NoExceptions ? true : false );
-    _mmapOptions.hideVad.checked( flags & blackbone::HideVAD ? true : false );
-
-    return flags;
-}
-
 
 /// <summary>
 /// Update interface controls
 /// </summary>
-/// <param name="mode">Injection mode</param>
 /// <returns>Error code</returns>
-DWORD MainDlg::UpdateInterface( MapMode mode )
+DWORD MainDlg::UpdateInterface( )
 {
     // Reset controls state
     if (_exProc.checked())
     {
-        _procCmdLine.disable();
         _procList.enable();
-        _threadList.enable();
         _selectProc.disable();
     }
     else
     {
-        _autoProc.checked() ? _procCmdLine.disable() : _procCmdLine.enable();
         _procList.disable();
-        _threadList.disable();
         _selectProc.enable();
     }
 
-    _exProc.enable();
-    _newProc.enable();
-    _autoProc.enable();
-    _initFuncList.enable();
-    _initArg.enable();
-    _unlink.enable();
-
-    switch (mode)
+    if (_profileMgr.config().injectMode == Kernel_DriverMap)
     {
-        case Normal:
-            _mmapOptions.manualInmport.disable();
-            _mmapOptions.addLdrRef.disable();
-            _mmapOptions.wipeHeader.disable();
-            _mmapOptions.noTls.disable();
-            _mmapOptions.noExceptions.disable();
-            _mmapOptions.hideVad.disable();
-            break;
-
-        case Manual:
-            _mmapOptions.manualInmport.enable();
-            _mmapOptions.addLdrRef.enable();
-            _mmapOptions.wipeHeader.enable();
-            _mmapOptions.noTls.enable();
-            _mmapOptions.noExceptions.enable();
-            if (blackbone::Driver().loaded())
-                _mmapOptions.hideVad.enable();
-
-            _threadList.selection( 0 );
-            _threadList.disable();
-            _unlink.disable();
-            break;
-
-        case Kernel_Thread:
-        case Kernel_APC:
-        case Kernel_DriverMap:
-            _threadList.selection( 0 );
-            _threadList.disable();
-
-            _mmapOptions.manualInmport.disable();
-            _mmapOptions.addLdrRef.disable();
-            _mmapOptions.wipeHeader.disable();
-            _mmapOptions.noTls.disable();
-            _mmapOptions.noExceptions.disable();
-            _mmapOptions.hideVad.disable();
-
-            if (mode == Kernel_DriverMap)
-            {
-                _unlink.disable();
-                _initFuncList.selectedText( L"" );
-                _initFuncList.disable();
-                _initArg.reset();
-                _initArg.disable();
-                _exProc.disable();
-                _newProc.disable();
-                _autoProc.disable();
-                _procCmdLine.disable();
-                _procList.disable();
-                _selectProc.disable();
-            }
-
-            break;
-
-        default:
-            break;
+        _exProc.disable();
+        _newProc.disable();
+        _autoProc.disable();
+        _procList.disable();
+        _selectProc.disable();
     }
+    else
+    {
+        _exProc.enable();
+        _newProc.enable();
+        _autoProc.enable();
+    }
+
+    // Disable inject button if no images available
+    if (_images.empty())
+        _inject.disable();
 
     return ERROR_SUCCESS;
 }
@@ -339,6 +232,29 @@ DWORD MainDlg::UpdateInterface( MapMode mode )
 /// <returns>true if image was selected, false if canceled</returns>
 bool MainDlg::SelectExecutable( std::wstring& selectedPath )
 {
+    _profileMgr.config().processMode = _newProc.checked() ? NewProcess : ManualLaunch;
+    auto res = OpenSaveDialog( L"All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0", 2, selectedPath );
+    UpdateInterface();
+    return res;
+}
+
+/// <summary>
+/// Invoke Open/Save file dialog
+/// </summary>
+/// <param name="filter">File filter</param>
+/// <param name="defIndex">Default filter index</param>
+/// <param name="selectedPath">Target file path</param>
+/// <param name="bSave">true to Save file, false to open</param>
+/// <param name="defExt">Default file extension for file save</param>
+/// <returns>true on success, false if operation was canceled by user</returns>
+bool MainDlg::OpenSaveDialog( 
+    const wchar_t* filter, 
+    int defIndex, 
+    std::wstring& selectedPath,
+    bool bSave /*= false*/, 
+    const std::wstring& defExt /*= L""*/
+    )
+{
     OPENFILENAMEW ofn = { 0 };
     wchar_t path[MAX_PATH] = { 0 };
 
@@ -347,18 +263,97 @@ bool MainDlg::SelectExecutable( std::wstring& selectedPath )
     ofn.lpstrFile = path;
     ofn.lpstrFile[0] = '\0';
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrFilter = TEXT( "All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0" );
-    ofn.nFilterIndex = 2;
+    ofn.lpstrFilter = filter;
+    ofn.nFilterIndex = defIndex;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST;
-
-    if (GetOpenFileName( &ofn ))
+    if (!bSave)
     {
-        selectedPath = path;
-        return true;
+        ofn.Flags = OFN_PATHMUSTEXIST;
+    }
+    else
+    {
+        ofn.Flags = OFN_OVERWRITEPROMPT;
+        ofn.lpstrDefExt = defExt.c_str();
     }
 
-    return false;
+    auto res = bSave ? GetSaveFileNameW( &ofn ) : GetOpenFileNameW( &ofn );
+    if (res)
+        selectedPath = path;
+
+    return res != FALSE;
+}
+
+/// <summary>
+/// Load selected image and do some validation
+/// </summary>
+/// <param name="path">Full qualified image path</param>
+/// <returns>Error code </returns>
+DWORD MainDlg::LoadImageFile( const std::wstring& path )
+{
+    blackbone::pe::PEImage img;
+    blackbone::pe::vecExports exports;
+
+    // Check if image is already in the list
+    if (std::find_if( _images.begin(), _images.end(),
+        [&path]( const blackbone::pe::PEImage& img ) { return path == img.path(); } ) != _images.end())
+    {
+        Message::ShowInfo( _hwnd, L"Image '" + path + L"' is already in the list" );
+        return ERROR_ALREADY_EXISTS;
+    }
+
+    // Check if image is a PE file
+    if (!NT_SUCCESS( img.Load( path ) ))
+    {
+        std::wstring errstr = std::wstring( L"File \"" ) + path + L"\" is not a valid PE image";
+        Message::ShowError( _hwnd, errstr.c_str() );
+
+        img.Release();
+        return ERROR_INVALID_IMAGE_HASH;
+    }
+
+    // In case of pure IL, list all methods
+    if (img.IsPureManaged() && img.net().Init( path ))
+    {
+        blackbone::ImageNET::mapMethodRVA methods;
+        img.net().Parse( methods );
+
+        for (auto& entry : methods)
+        {
+            std::wstring name = entry.first.first + L"." + entry.first.second;
+            exports.push_back( blackbone::pe::ExportData( blackbone::Utils::WstringToAnsi( name ), 0 ) );
+        }
+    }
+    // Simple exports otherwise
+    else
+        img.GetExports( exports );
+
+    // Add to internal lists
+    AddToModuleList( img );
+    _exports.emplace_back( exports );
+    _inject.enable();
+
+    return ERROR_SUCCESS;
+}
+
+/// <summary>
+/// Add module to module list
+/// </summary>
+/// <param name="path">Loaded image</param>
+/// <param name="exports">Module exports</param>
+void MainDlg::AddToModuleList( const blackbone::pe::PEImage& img )
+{
+    wchar_t* platfom = nullptr;
+
+    // Module platform
+    if (img.mType() == blackbone::mt_mod32)
+        platfom = L"32 bit";
+    else if (img.mType() == blackbone::mt_mod64)
+        platfom = L"64 bit";
+    else
+        platfom = L"Unknown";
+
+    _images.emplace_back( img );
+    _modules.AddItem( blackbone::Utils::StripPath( img.path() ), 0, { platfom } );
 }

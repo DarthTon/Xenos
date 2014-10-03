@@ -57,7 +57,6 @@ bool DumpHandler::CreateWatchdog(
         _flags = flags;
         _pUserContext = pContext;
         _dumpRoot = dumpRoot;
-        _pFilterProc = pFilter;
         _pDumpProc = pDump;
 
         _pPrevFilter = SetUnhandledExceptionFilter( &DumpHandler::UnhandledExceptionFilter );

@@ -98,7 +98,7 @@ namespace dump
         HANDLE _hWatchThd = NULL;                       // Watchdog thread handle
         PEXCEPTION_POINTERS _ExceptionInfo = nullptr;   // Crash exception info
         void* _pUserContext = nullptr;                  // User context for callback
-        std::wstring _dumpRoot = L".";                  // Root foler for dump files
+        std::wstring _dumpRoot = L".";                  // Root folder for dump files
         fnCallback _pDumpProc = nullptr;                // Crash callback
     };
 }

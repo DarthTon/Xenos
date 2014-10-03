@@ -33,7 +33,7 @@ INT_PTR ModulesDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     _modList.AddColumn( L"Platform",   60,  Platform );
     _modList.AddColumn( L"Load type",  80,  LoadType );
 
-    RefrestList();
+    RefreshList();
 
     return TRUE;
 }
@@ -41,8 +41,7 @@ INT_PTR ModulesDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 
 INT_PTR ModulesDlg::OnCloseBtn( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    EndDialog( hDlg, 0 );
-    return TRUE;
+    return CloseDialog();
 }
 
 INT_PTR ModulesDlg::OnUnload( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
@@ -69,7 +68,7 @@ INT_PTR ModulesDlg::OnUnload( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
         if (mod != nullptr)
         {
             _process.modules().Unload( mod );
-            RefrestList();
+            RefreshList();
         }
         else
             Message::ShowError( hDlg, L"Module not found" );
@@ -79,7 +78,10 @@ INT_PTR ModulesDlg::OnUnload( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 }
 
 
-void ModulesDlg::RefrestList( )
+/// <summary>
+/// Refresh module list
+/// </summary>
+void ModulesDlg::RefreshList( )
 {
     _modList.reset();
     if (!_process.valid())
@@ -87,24 +89,21 @@ void ModulesDlg::RefrestList( )
 
     // Found modules
     auto modsLdr = _process.modules().GetAllModules( blackbone::LdrList );
+    auto modsSec = _process.modules().GetAllModules( blackbone::Sections );
     auto modsPE = _process.modules().GetAllModules( blackbone::PEHeaders );
 
     // Known manual modules
-    decltype(modsLdr) modsManual;
+    decltype(modsLdr) modsManual, modsAll;
     _process.modules().GetManualModules( modsManual );
 
-    for (auto& mod : modsPE)
+    // Gather all modules
+    modsAll.insert( modsLdr.begin(), modsLdr.end() );
+    modsAll.insert( modsSec.begin(), modsSec.end() );
+    modsAll.insert( modsPE.begin(), modsPE.end() );
+    modsAll.insert( modsManual.begin(), modsManual.end() );
+
+    for (auto& mod : modsAll)
     {
-        // Avoid manual modules duplication
-        if (mod.second.name.find( L"Unknown_0x" ) == 0)
-        {
-            auto iter = std::find_if( modsManual.begin(), modsManual.end(), [&mod]( const decltype(modsLdr)::value_type& val )
-                                      { return val.second.baseAddress == mod.second.baseAddress; } );
-
-            if (iter != modsManual.end())
-                continue;
-        }
-
         wchar_t address[64];
         wchar_t* platfom = nullptr;
         wchar_t* detected = nullptr;
@@ -122,12 +121,14 @@ void ModulesDlg::RefrestList( )
         // Mapping type
         if (mod.second.manual == true)
             detected = L"Manual map";
-        else if (modsLdr.find( mod.first ) != modsLdr.end())
+        else if (modsLdr.count( mod.first ))
             detected = L"Normal";
+        else if (modsSec.count( mod.first ))
+            detected = L"Section only";
         else if (mod.second.name.find( L"Unknown_0x" ) == 0)
             detected = L"PE header";
         else
-            detected = L"Section only";
+            detected = L"Unknown";
 
         _modList.AddItem( mod.second.name, static_cast<LPARAM>(mod.second.baseAddress), { address, platfom, detected } );
     }

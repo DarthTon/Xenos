@@ -22,11 +22,14 @@ public:
     ~ModulesDlg();
 
 private:
-    void RefrestList();
+    /// <summary>
+    /// Refresh module list
+    /// </summary>
+    void RefreshList();
 
-    virtual INT_PTR OnInit      ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );   
-    virtual INT_PTR OnCloseBtn  ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
-    virtual INT_PTR OnUnload    ( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+    MSG_HANDLER( OnInit );
+    MSG_HANDLER( OnCloseBtn );
+    MSG_HANDLER( OnUnload );
 
 private:
     ctrl::ListView _modList;

@@ -12,6 +12,7 @@ public:
         : _hwnd( hwnd )  {  }
 
     virtual inline void Attach( HWND hwnd ) { _hwnd = hwnd; }
+    virtual inline void Attach( HWND hDlg, UINT id ) { _hwnd = GetDlgItem( hDlg, id ); }
 
     virtual inline HWND hwnd() const { return _hwnd; }
 
