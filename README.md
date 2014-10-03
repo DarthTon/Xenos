@@ -16,6 +16,7 @@ Windows dll injector. This project completely depends on Blackbone library - htt
 - Injection using thread hijacking
 - Injection of x64 images into WOW64 process
 - Image manual mapping
+- Injection profiles
 
 Manual map features:
 - Relocations, import, delayed import, bound import
@@ -27,7 +28,7 @@ Manual map features:
 - Support for exceptions in private memory under DEP
 - C++/CLI images are supported (use 'Add loader reference' in this case)
 
-Supported OS: Win7 - Win8.1 x64
+Supported OS: Win7 - Win10 x64
 
 ## License ##
 Xenos is licensed under the MIT License. Dependencies are under their respective licenses.

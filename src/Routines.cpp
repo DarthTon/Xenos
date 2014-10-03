@@ -58,7 +58,7 @@ DWORD MainDlg::LoadConfig( const std::wstring& path /*= L""*/ )
 
         // Update profile name
         if (!_defConfig.empty())
-            _status.SetText( 0, L"Profile - " + blackbone::Utils::StripPath( _defConfig ) );
+            _status.SetText( 0, blackbone::Utils::StripPath( _defConfig ) );
     }
     // Default settings
     else
