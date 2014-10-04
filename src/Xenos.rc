@@ -240,10 +240,10 @@ END
 // Driver
 //
 
-IDR_DRV7                Driver                  "C:\\Users\\Ton\\Documents\\Visual Studio 2013\\Projects\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
-IDR_DRV8                Driver                  "C:\\Users\\Ton\\Documents\\Visual Studio 2013\\Projects\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
-IDR_DRV81               Driver                  "C:\\Users\\Ton\\Documents\\Visual Studio 2013\\Projects\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
-IDR_DRV10               Driver                  "C:\\Users\\Ton\\Documents\\Visual Studio 2013\\Projects\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
+IDR_DRV7                Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
+IDR_DRV8                Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
+IDR_DRV81               Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
+IDR_DRV10               Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
 #endif    // Neutral (Default) resources
 /////////////////////////////////////////////////////////////////////////////
 
