@@ -25,6 +25,7 @@ public:
         bool unlink = false;            // Unlink image after injection
         bool erasePE = false;           // Erase PE headers for native inject
         bool close = false;             // Close app after injection
+        bool krnHandle = false;         // Escalate process handle access rights
     };
 
 public:

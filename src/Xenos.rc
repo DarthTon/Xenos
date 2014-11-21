@@ -101,7 +101,7 @@ BEGIN
     GROUPBOX        "Injection type",IDC_STATIC,7,7,186,37
     GROUPBOX        "Initialization routine",IDC_STATIC,200,46,198,62
     GROUPBOX        "Process srtaup command line",IDC_STATIC,200,7,198,37
-    GROUPBOX        "Injection options",IDC_STATIC,200,115,198,77
+    GROUPBOX        "General options",IDC_STATIC,200,115,198,77
     CONTROL         "Close after injection",IDC_INJ_CLOSE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,212,131,80,10
     LTEXT           "Inject delay",IDC_STATIC,214,150,39,8
     LTEXT           "Inject interval",IDC_STATIC,207,173,46,8
@@ -110,6 +110,7 @@ BEGIN
     LTEXT           "ms",IDC_STATIC,296,150,10,8
     LTEXT           "ms",IDC_STATIC,296,173,10,8
     CONTROL         "Use existing thread",IDC_HIJACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,87,78,10
+    CONTROL         "Escalate handle acess",IDC_KRN_HANDLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,311,131,86,10
 END
 
 
@@ -191,8 +192,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,0
- PRODUCTVERSION 2,0,0,0
+ FILEVERSION 2,1,0,0
+ PRODUCTVERSION 2,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -208,12 +209,12 @@ BEGIN
         BLOCK "040004b0"
         BEGIN
             VALUE "FileDescription", "PE injector"
-            VALUE "FileVersion", "2.0.0.0"
+            VALUE "FileVersion", "2.1.0.0"
             VALUE "InternalName", "Xenos.exe"
             VALUE "LegalCopyright", "Copyright (C) 2014"
             VALUE "OriginalFilename", "Xenos.exe"
             VALUE "ProductName", "Xenos"
-            VALUE "ProductVersion", "2.0.0.0"
+            VALUE "ProductVersion", "2.1.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -237,13 +238,13 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// Driver
+// DRIVER
 //
 
-IDR_DRV7                Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
-IDR_DRV8                Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
-IDR_DRV81               Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
-IDR_DRV10               Driver                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
+IDR_DRV7                DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
+IDR_DRV8                DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
+IDR_DRV81               DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
+IDR_DRV10               DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
 #endif    // Neutral (Default) resources
 /////////////////////////////////////////////////////////////////////////////
 

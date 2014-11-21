@@ -58,6 +58,8 @@
 #define IDC_CLEAR_MODS                  1028
 #define IDC_DELAY                       1029
 #define IDC_PERIOD                      1030
+#define IDC_CHECK1                      1031
+#define IDC_KRN_HANDLE                  1031
 #define ID_TOOLS_EJECTMODULES           32772
 #define ID_TOOLS_PROTECTSELF            32773
 #define ID_TOOLS_PROTECT                32774
@@ -74,7 +76,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        151
 #define _APS_NEXT_COMMAND_VALUE         32780
-#define _APS_NEXT_CONTROL_VALUE         1030
+#define _APS_NEXT_CONTROL_VALUE         1032
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

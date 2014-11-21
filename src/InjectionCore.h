@@ -16,6 +16,7 @@ enum MapMode
     Manual,             // Manual map
     Kernel_Thread,      // Kernel-mode CreateThread into LdrLoadDll
     Kernel_APC,         // Kernel-mode LdrLoadDll APC 
+    Kernel_MMap,        // Kernel-mode manual map
 
     Kernel_DriverMap,   // Kernel-mode driver mapping
 };
@@ -41,6 +42,7 @@ struct InjectContext
     bool unlinkImage = false;                           // Set to true to unlink image after injection
     bool erasePE = false;                               // Erase PE headers after native injection
     bool waitActive = false;                            // Process waiting state
+    bool krnHandle = false;                             // Escalate handle access rights
 
     uint32_t delay = 0;                                 // Delay before injection
     uint32_t period = 0;                                // Period between images

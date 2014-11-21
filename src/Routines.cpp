@@ -154,6 +154,7 @@ void MainDlg::Inject()
     context.hijack = cfg.hijack;
     context.unlinkImage = cfg.unlink;
     context.erasePE = cfg.erasePE;
+    context.krnHandle = cfg.krnHandle;
     context.delay = cfg.delay;
     context.period = cfg.period;
 

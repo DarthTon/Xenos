@@ -264,7 +264,10 @@ INT_PTR MainDlg::OnProtectSelf( HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 
     // Protect current process
     if (blackbone::Driver().loaded())
-        status = blackbone::Driver().ProtectProcess( GetCurrentProcessId(), true );
+    {
+        //status = blackbone::Driver().ProtectProcess( GetCurrentProcessId(), true );
+        status |= blackbone::Driver().UnlinkHandleTable( GetCurrentProcessId() );
+    }
 
     if (!NT_SUCCESS( status ))
         Message::ShowError( hDlg, L"Failed to protect current process.\n" + blackbone::Utils::GetErrorDescription( status ) );

@@ -81,7 +81,8 @@ private:
 
     ctrl::Button _injClose;         // Close application after injection
     ctrl::Button _unlink;           // Unlink image after injection   
-    ctrl::Button _erasePE;          // Unlink image after injection   
+    ctrl::Button _erasePE;          // Erase PE headers after injection
+    ctrl::Button _krnHandle;        // Escalate handle access rights
 
     struct
     {

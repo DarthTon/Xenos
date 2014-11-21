@@ -74,8 +74,24 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
             return GetLastError();
         }
 
+        // Escalate handle access rights through driver
+        if (context.krnHandle)
+        {
+            status = _process.Attach( pi.dwProcessId, PROCESS_QUERY_LIMITED_INFORMATION );
+            if (NT_SUCCESS( status ))
+            {
+                status = blackbone::Driver().PromoteHandle(
+                    GetCurrentProcessId(),
+                    _process.core().handle(),
+                    DEFAULT_ACCESS_P | PROCESS_QUERY_LIMITED_INFORMATION
+                    );
+            }
+        }
+        else
+            status = _process.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS );
+
         // Create new thread to make sure LdrInitializeProcess gets called
-        if (NT_SUCCESS( _process.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS ) ))
+        if (NT_SUCCESS( status ))
             _process.EnsureInit();
 
         // No process handle is required for kernel injection
@@ -84,7 +100,7 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
             context.pid = pi.dwProcessId;
             _process.Detach();
 
-            // Thread must be running for APC to execute
+            // Thread must be running for APC execution
             if (context.injectMode == Kernel_APC)
             {
                 ResumeThread( pi.hThread );
@@ -98,7 +114,22 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
     // Attach to existing process
     if (context.injectMode < Kernel_Thread && context.procMode != NewProcess)
     {
-        status = _process.Attach( context.pid );
+        // Escalate handle access rights through driver
+        if (context.krnHandle)
+        {
+            status = _process.Attach( context.pid, PROCESS_QUERY_LIMITED_INFORMATION );
+            if (NT_SUCCESS( status ))
+            {
+                status = blackbone::Driver().PromoteHandle(
+                    GetCurrentProcessId(),
+                    _process.core().handle(),
+                    DEFAULT_ACCESS_P | PROCESS_QUERY_LIMITED_INFORMATION
+                    );
+            }
+        }
+        else
+            status = _process.Attach( context.pid );
+
         if (status != STATUS_SUCCESS)
         {
             std::wstring errmsg = L"Can not attach to the process.\n" + blackbone::Utils::GetErrorDescription( status );
@@ -183,6 +214,13 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
         return ERROR_INVALID_IMAGE_HASH;
     }
 
+    // Additional validation for kernel manual map
+    if (context.injectMode == Kernel_MMap && !img.IsPureManaged() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
+    {
+        Message::ShowError( _hMainDlg, L"Can't inject 64 bit image '" + img.name() + L"' into WOW64 process" );
+        return ERROR_INVALID_PARAMETER;
+    }
+
     // Can't inject managed dll through WOW64 barrier
     if (img.IsPureManaged() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
     {
@@ -209,7 +247,7 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
     }
 
     // Manual map restrictions
-    if (context.injectMode == Manual)
+    if (context.injectMode == Manual || context.injectMode == Kernel_MMap)
     {
         if (img.IsPureManaged())
         {
@@ -226,7 +264,7 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
                 Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to manually map 64 bit image '" + img.name() + L"'" );
 
             return ERROR_INVALID_PARAMETER;
-        }        
+        }
     }
 
     // Trying to inject x64 dll into WOW64 process
@@ -428,8 +466,9 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
 
             case Kernel_Thread:
             case Kernel_APC:
+            case Kernel_MMap:
                 errCode = InjectKernel( context, img,  exportRVA );
-                break;
+                break;                
 
             case Kernel_DriverMap:
                 errCode = MapDriver( context, img );
@@ -542,15 +581,28 @@ DWORD InjectionCore::InjectKernel(
     uint32_t initRVA /*= 0*/
     )
 {
-    return blackbone::Driver().InjectDll(
-        context.pid,
-        img.path(),
-        (context.injectMode == Kernel_Thread ? IT_Thread : IT_Apc),
-        initRVA,
-        context.initRoutineArg,
-        context.unlinkImage,
-        context.erasePE
-        );
+    if (context.injectMode == Kernel_MMap)
+    {
+        return blackbone::Driver().MmapDll(
+            context.pid,
+            img.path(),
+            (KMmapFlags)context.flags,
+            initRVA,
+            context.initRoutineArg
+            );
+    }
+    else
+    {
+        return blackbone::Driver().InjectDll(
+            context.pid,
+            img.path(),
+            (context.injectMode == Kernel_Thread ? IT_Thread : IT_Apc),
+            initRVA,
+            context.initRoutineArg,
+            context.unlinkImage,
+            context.erasePE
+            );
+    }
 }
 
 /// <summary>

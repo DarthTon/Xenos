@@ -28,6 +28,8 @@ INT_PTR DlgSettings::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
     _injClose.Attach( _hwnd, IDC_INJ_CLOSE );
     _unlink.Attach( _hwnd, IDC_UNLINK );
     _erasePE.Attach( _hwnd, IDC_WIPE_HDR_NATIVE );
+    _krnHandle.Attach( _hwnd, IDC_KRN_HANDLE );
+
     _delay.Attach( _hwnd, IDC_DELAY );
     _period.Attach( _hwnd, IDC_PERIOD );
 
@@ -46,14 +48,12 @@ INT_PTR DlgSettings::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
     _injectionType.Add( L"Kernel (CreateThread)", Kernel_Thread );
     _injectionType.Add( L"Kernel (APC)", Kernel_APC );
-    _injectionType.Add( L"Kernel driver manual map", Kernel_DriverMap );
+    _injectionType.Add( L"Kernel (Manual map)", Kernel_MMap );
+    //_injectionType.Add( L"Kernel driver manual map", Kernel_DriverMap );
 
     // Disable some driver-dependent stuff
     if (blackbone::Driver().loaded())
-    {
         _mmapOptions.hideVad.enable();
-        EnableMenuItem( GetMenu( _hwnd ), ID_TOOLS_PROTECT, MF_ENABLED );
-    }
 
     _injectionType.selection( 0 );
 
@@ -108,7 +108,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
 
     auto status = blackbone::Driver().status();
 
-    // Revert selection
+    // Try to enable test signing
     if (!NT_SUCCESS( status ))
     {
         auto text = L"Failed to load BlackBone driver:\n\n" + blackbone::Utils::GetErrorDescription( status );
@@ -145,6 +145,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
             }
         }
 
+        // Revert selection
         _injectionType.selection( _lastSelected );
     }
 
@@ -171,10 +172,12 @@ DWORD DlgSettings::UpdateFromConfig()
     _erasePE.checked( cfg.erasePE );
     _injClose.checked( cfg.close );
 
-    // Injection type
     _lastSelected = cfg.injectMode;
     _injectionType.selection( cfg.injectMode );
     _hijack.checked( cfg.hijack );
+
+    if (blackbone::Driver().loaded())
+        _krnHandle.checked( cfg.krnHandle );
 
     MmapFlags( (blackbone::eLoadFlags)cfg.manualMapFlags );
 
@@ -198,6 +201,7 @@ DWORD DlgSettings::SaveConfig()
     cfg.erasePE        = _erasePE.checked();
     cfg.close          = _injClose.checked();
     cfg.hijack         = _hijack.checked();
+    cfg.krnHandle      = _krnHandle.checked();
     cfg.delay          = _delay.integer();
     cfg.period         = _period.integer();
 
@@ -220,6 +224,9 @@ void DlgSettings::UpdateInterface()
     _initArg.enable();
     _erasePE.enable();
     _unlink.enable();
+
+    if (blackbone::Driver().loaded())
+        _krnHandle.enable();
 
     switch (cfg.injectMode)
     {
@@ -248,15 +255,33 @@ void DlgSettings::UpdateInterface()
 
         case Kernel_Thread:
         case Kernel_APC:
-        case Kernel_DriverMap:
+        case Kernel_MMap:
+        case Kernel_DriverMap:        
             _hijack.disable();
+            _krnHandle.disable();
 
-            _mmapOptions.manualInmport.disable();
             _mmapOptions.addLdrRef.disable();
-            _mmapOptions.wipeHeader.disable();
-            _mmapOptions.noTls.disable();
-            _mmapOptions.noExceptions.disable();
-            _mmapOptions.hideVad.disable();
+
+            if (cfg.injectMode == Kernel_MMap)
+            {
+                _mmapOptions.addLdrRef.checked( false );
+                _mmapOptions.manualInmport.enable();
+                _mmapOptions.wipeHeader.enable();
+                _mmapOptions.noTls.enable();
+                _mmapOptions.noExceptions.enable();
+                _mmapOptions.hideVad.enable();
+
+                _unlink.disable();
+                _erasePE.disable();
+            }
+            else
+            {
+                _mmapOptions.manualInmport.disable();
+                _mmapOptions.wipeHeader.disable();
+                _mmapOptions.noTls.disable();
+                _mmapOptions.noExceptions.disable();
+                _mmapOptions.hideVad.disable();
+            }
 
             if (cfg.injectMode == Kernel_DriverMap)
             {
@@ -287,7 +312,7 @@ blackbone::eLoadFlags DlgSettings::MmapFlags()
     if (_mmapOptions.manualInmport)
         flags |= blackbone::ManualImports;
 
-    if (_mmapOptions.addLdrRef)
+    if (_mmapOptions.addLdrRef && _injectionType.selection() != Kernel_MMap)
         flags |= blackbone::CreateLdrRef;
 
     if (_mmapOptions.wipeHeader)
@@ -315,6 +340,10 @@ DWORD DlgSettings::MmapFlags( blackbone::eLoadFlags flags )
     // Exclude HideVAD if no driver present
     if (!blackbone::Driver().loaded())
         flags &= ~blackbone::HideVAD;
+
+    // Exclude CreateLdrRef for kernel manual map
+    if (_injectionType.selection() == Kernel_MMap)
+        flags &= ~blackbone::CreateLdrRef;
 
     _mmapOptions.manualInmport.checked( flags & blackbone::ManualImports ? true : false );
     _mmapOptions.addLdrRef.checked( flags & blackbone::CreateLdrRef ? true : false );
