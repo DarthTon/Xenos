@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Message.hpp"
+#include "Log.h"
 
 #include "../../BlackBone/src/BlackBone/Config.h"
 #include "../../BlackBone/src/BlackBone/Process/Process.h"

@@ -200,6 +200,7 @@
   <ItemGroup>
     <ClInclude Include="Button.hpp" />
     <ClInclude Include="ComboBox.hpp" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="ProfileMgr.h" />
     <ClInclude Include="Control.hpp" />
     <ClInclude Include="Dialog.hpp" />

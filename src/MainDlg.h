@@ -12,6 +12,8 @@
 #include "Message.hpp"
 #include "InjectionCore.h"
 
+#include "Log.h"
+
 class MainDlg : public Dialog
 {
 

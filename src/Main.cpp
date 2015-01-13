@@ -2,6 +2,7 @@
 #include "MainDlg.h"
 #include "DumpHandler.h"
 #include "../../BlackBone/contrib/VersionHelpers.h"
+#include "../../BlackBone/src/BlackBone/DriverControl/DriverControl.h"
 
 /// <summary>
 /// Crash dump notify callback
@@ -27,7 +28,7 @@ void AssociateExtension()
 
     std::wstring alias = L"XenosProfile";
     std::wstring desc = L"Xenos injection profile";
-    std::wstring openWith = std::wstring(tmp) + L" %1";
+    std::wstring openWith = std::wstring( tmp ) + L" %1";
     std::wstring icon = std::wstring( tmp ) + L",-" + std::to_wstring( IDI_ICON1 );
 
     auto AddKey = []( const std::wstring& subkey, const std::wstring& value ){
@@ -93,7 +94,7 @@ public:
 
         if (IsWindows10OrGreater())
             filename = L"BlackBoneDrv10.sys";
-        else if( IsWindows8Point1OrGreater() )
+        else if (IsWindows8Point1OrGreater())
             filename = L"BlackBoneDrv81.sys";
         else if (IsWindows8OrGreater())
             filename = L"BlackBoneDrv8.sys";
@@ -102,15 +103,45 @@ public:
     }
 };
 
+/// <summary>
+/// Log major OS information
+/// </summary>
+void LogOSInfo()
+{
+    OSVERSIONINFOEXW info = { 0 };
+    SYSTEM_INFO sinfo = { 0 };
+    char* osArch = "x64";
 
-int APIENTRY wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR lpCmdLine, int /*nCmdShow*/)
+    info.dwOSVersionInfoSize = sizeof( info );
+
+    GetVersionExW( (OSVERSIONINFO*)&info );
+    GetNativeSystemInfo( &sinfo );
+
+    if (sinfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL)
+        osArch = "x86";
+
+    xlog::Normal(
+        "Started on Windows %d.%d.%d.%d %s. Driver status: 0x%X",
+        info.dwMajorVersion,
+        info.dwMinorVersion,
+        info.wServicePackMajor,
+        info.dwBuildNumber,
+        osArch,
+        blackbone::Driver().status()
+        );
+}
+
+
+int APIENTRY wWinMain( HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR lpCmdLine, int /*nCmdShow*/ )
 {
     DriverExtract drv;
 
     // Setup dump generation
     dump::DumpHandler::Instance().CreateWatchdog( blackbone::Utils::GetExeDirectory(), dump::CreateFullDump, &DumpNotifier );
     AssociateExtension();
-    
+
     MainDlg mainDlg( lpCmdLine );
+    LogOSInfo();
+
     return (int)mainDlg.RunModeless( NULL, IDR_ACCELERATOR1 );
 }

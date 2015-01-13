@@ -31,6 +31,8 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
     // Await new process
     if (context.procMode == ManualLaunch)
     {
+        xlog::Normal( "Waiting on process %ls", context.procPath.c_str() );
+
         auto procName = blackbone::Utils::StripPath( context.procPath );
         if (procName.empty())
         {
@@ -47,7 +49,10 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         {
             // Canceled by user
             if (!context.waitActive)
+            {
+                xlog::Warning( "Process wait canceled by user" );
                 return ERROR_CANCELLED;
+            }
 
             // Detect new process
             diff.clear();
@@ -57,6 +62,7 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
             if (!diff.empty())
             {
                 context.pid = diff.front().pid;
+                xlog::Verbose( "Got process %d", context.pid );
                 break;
             }
         }
@@ -66,6 +72,8 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
     {
         STARTUPINFOW si = { 0 };
         si.cb = sizeof( si );
+
+        xlog::Normal( "Creating new process '%ls' with arguments '%ls'", context.procPath.c_str(), context.procCmdLine.c_str() );
 
         if (!CreateProcessW( context.procPath.c_str(), (LPWSTR)context.procCmdLine.c_str(),
             NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, &si, &pi ))
@@ -77,6 +85,8 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         // Escalate handle access rights through driver
         if (context.krnHandle)
         {
+            xlog::Normal( "Escalating process handle access" );
+
             status = _process.Attach( pi.dwProcessId, PROCESS_QUERY_LIMITED_INFORMATION );
             if (NT_SUCCESS( status ))
             {
@@ -86,9 +96,16 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
                     DEFAULT_ACCESS_P | PROCESS_QUERY_LIMITED_INFORMATION
                     );
             }
+
+            if (!NT_SUCCESS( status ))
+                xlog::Error( "Failed to escalate process handle access, status 0x%X", status );
         }
         else
+        {
             status = _process.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS );
+            if (!NT_SUCCESS( status ))
+                xlog::Error( "Failed to attach to process, status 0x%X", status );
+        }
 
         // Create new thread to make sure LdrInitializeProcess gets called
         if (NT_SUCCESS( status ))
@@ -117,6 +134,8 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         // Escalate handle access rights through driver
         if (context.krnHandle)
         {
+            xlog::Normal( "Escalating process handle access" );
+
             status = _process.Attach( context.pid, PROCESS_QUERY_LIMITED_INFORMATION );
             if (NT_SUCCESS( status ))
             {
@@ -126,6 +145,9 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
                     DEFAULT_ACCESS_P | PROCESS_QUERY_LIMITED_INFORMATION
                     );
             }
+
+            if (!NT_SUCCESS( status ))
+                xlog::Error( "Failed to escalate process handle access, status 0x%X", status );
         }
         else
             status = _process.Attach( context.pid );
@@ -372,6 +394,21 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     DWORD errCode = ERROR_SUCCESS;
     PROCESS_INFORMATION pi = { 0 };
 
+    // Log some info
+    xlog::Critical(
+        "Injection initiated. Mode: %d, process type: %d, pid: %d, mmap flags: 0x%X, "
+        "erasePE: %d, unlink: %d, thread hijack: %d, init routine: '%s', init arg: '%ls'",
+        pContext->injectMode, 
+        pContext->procMode,
+        pContext->pid,
+        pContext->flags,
+        pContext->erasePE,
+        pContext->unlinkImage,
+        pContext->hijack,
+        pContext->initRoutine.c_str(),
+        pContext->initRoutineArg.c_str()
+        );
+
     // Get process for injection
     errCode = GetTargetProcess( *pContext, pi );
     if (errCode != ERROR_SUCCESS)
@@ -427,22 +464,31 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
     const blackbone::ModuleData* mod = nullptr;
     uint32_t exportRVA = 0;
 
+    xlog::Critical( "Injecting image '%ls'", img.path().c_str() );
+
     // Check export
     errCode = ValidateInit( context.initRoutine, exportRVA, img );
     if (errCode != ERROR_SUCCESS)
+    {
+        xlog::Error( "Image init routine check failed, status: 0x%X", errCode );
         return errCode;
-        
+    }
+
     // Final sanity check
     if (context.injectMode < Kernel_Thread || context.injectMode == Kernel_DriverMap)
     {
         errCode = ValidateContext( context, img );
         if (errCode != ERROR_SUCCESS)
+        {
+            xlog::Error( "Context validation failed, status: 0x%X", errCode );
             return errCode;
+        }
     }
 
     // Get context thread
     if (context.hijack && context.injectMode < Kernel_Thread)
     {
+        xlog::Normal( "Searching for thread to hijack" );
         pThread = _process.threads().getMostExecuted();
         if (pThread == nullptr)
         {
@@ -462,12 +508,16 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
 
             case Manual:
                 mod = _process.mmap().MapImage( img.path(), blackbone::RebaseProcess | blackbone::NoDelayLoad | context.flags );
+                if (!mod)
+                    xlog::Error( "Failed to inject image using manual map, status: 0x%X", LastNtStatus() );
                 break;
 
             case Kernel_Thread:
             case Kernel_APC:
             case Kernel_MMap:
                 errCode = InjectKernel( context, img,  exportRVA );
+                if (!NT_SUCCESS( errCode ))
+                    xlog::Error( "Failed to inject image using kernel injection, status: 0x%X", errCode );
                 break;                
 
             case Kernel_DriverMap:
@@ -531,12 +581,15 @@ DWORD InjectionCore::InjectDefault(
     InjectContext& context, 
     const blackbone::pe::PEImage& img,
     blackbone::Thread* pThread,
-    const blackbone::ModuleData* &mod )
+    const blackbone::ModuleData* &mod
+    )
 {
     // Pure IL image
     if (img.IsPureManaged())
     {
         DWORD code = 0;
+
+        xlog::Normal( "Image '%ls' is pure IL", img.path().c_str() );
 
         if (!_process.modules().InjectPureIL(
             blackbone::ImageNET::GetImageRuntimeVer( img.path().c_str() ),
@@ -545,6 +598,7 @@ DWORD InjectionCore::InjectDefault(
             context.initRoutineArg,
             code ))
         {
+            xlog::Error( "Failed to inject pure IL image, status: %d", code );
             return ERROR_FUNCTION_FAILED;
         }
 
@@ -561,10 +615,18 @@ DWORD InjectionCore::InjectDefault(
         decltype(pfn)::ReturnType junk = 0;
         pfn.Call( junk, pThread );
 
+        if (junk == nullptr)
+            xlog::Error( "Failed to inject image using thread hijack" );
+
         mod = _process.modules().GetModule( const_cast<const std::wstring&>(img.path()) );
     }
     else
-        mod = _process.modules().Inject( img.path() );
+    {
+        NTSTATUS status = STATUS_SUCCESS;
+        mod = _process.modules().Inject( img.path(), &status );
+        if (!NT_SUCCESS( status ))
+            xlog::Error( "Failed to inject image using default injection, status: 0x%X", status );
+    }
 
     return mod != nullptr ? ERROR_SUCCESS : ERROR_FUNCTION_FAILED;
 }
@@ -635,13 +697,15 @@ DWORD InjectionCore::CallInitRoutine(
     {
         auto fnPtr = mod->baseAddress + exportRVA;
 
+        xlog::Normal( "Calling initialization routine for image '%ls'", img.path().c_str() );
+
         // Create new thread
         if (pThread == nullptr)
         {
             auto argMem = _process.memory().Allocate( 0x1000, PAGE_READWRITE );
             argMem.Write( 0, context.initRoutineArg.length() * sizeof( wchar_t ) + 2, context.initRoutineArg.c_str() );
 
-            _process.remote().ExecDirect( fnPtr, argMem.ptr() );
+            xlog::Normal( "Initialization routine returned 0x%X", _process.remote().ExecDirect( fnPtr, argMem.ptr() ) );
         }
         // Execute in existing thread
         else
@@ -650,6 +714,8 @@ DWORD InjectionCore::CallInitRoutine(
 
             int junk = 0;
             pfn.Call( junk, pThread );
+
+            xlog::Normal( "Initialization routine returned 0x%X", junk );
         }
     }
 

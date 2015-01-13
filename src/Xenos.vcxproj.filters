@@ -109,6 +109,9 @@
     <ClInclude Include="StatusBar.hpp">
       <Filter>Interface\Controls</Filter>
     </ClInclude>
+    <ClInclude Include="Log.h">
+      <Filter>Log</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resources">
@@ -146,6 +149,9 @@
     </Filter>
     <Filter Include="Interface\Settings">
       <UniqueIdentifier>{0db25773-59d9-487d-9d9f-3f3df6d3a096}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Log">
+      <UniqueIdentifier>{01cf98c8-a029-49f3-8002-2a821fdb7e0d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Log.h"
 
 class Message
 {
@@ -42,13 +43,27 @@ private:
         )
     {
         UINT uType = MB_ICONERROR;
+        xlog::LogLevel::e logLevel = xlog::LogLevel::error;
 
         if (type == Warning)
+        {
             uType = MB_ICONWARNING;
+            logLevel = xlog::LogLevel::warning;
+        }
         else if (type == Info)
+        {
             uType = MB_ICONINFORMATION;
+            logLevel = xlog::LogLevel::normal;
+        }
         else if (type == Question)
+        {
             uType = MB_YESNO | MB_ICONQUESTION;
+            logLevel = xlog::LogLevel::verbose;
+        }
+        
+        // Write to log
+        if (logLevel < xlog::LogLevel::verbose)
+            xlog::Logger::Instance().DoLog( logLevel, "%ls", msg.c_str() );
 
         return MessageBoxW( parent, msg.c_str(), title.c_str(), uType );
     }
