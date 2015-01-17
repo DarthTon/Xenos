@@ -108,24 +108,21 @@ public:
 /// </summary>
 void LogOSInfo()
 {
-    OSVERSIONINFOEXW info = { 0 };
-    SYSTEM_INFO sinfo = { 0 };
+    SYSTEM_INFO info = { 0 };
     char* osArch = "x64";
 
-    info.dwOSVersionInfoSize = sizeof( info );
+    auto pPeb = (blackbone::PEB_T*)NtCurrentTeb()->ProcessEnvironmentBlock;
+    GetNativeSystemInfo( &info );
 
-    GetVersionExW( (OSVERSIONINFO*)&info );
-    GetNativeSystemInfo( &sinfo );
-
-    if (sinfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL)
+    if (info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL)
         osArch = "x86";
 
     xlog::Normal(
         "Started on Windows %d.%d.%d.%d %s. Driver status: 0x%X",
-        info.dwMajorVersion,
-        info.dwMinorVersion,
-        info.wServicePackMajor,
-        info.dwBuildNumber,
+        pPeb->OSMajorVersion,
+        pPeb->OSMinorVersion,
+        (pPeb->OSCSDVersion >> 8) & 0xFF,
+        pPeb->OSBuildNumber,
         osArch,
         blackbone::Driver().status()
         );
