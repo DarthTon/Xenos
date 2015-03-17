@@ -11,6 +11,7 @@ InjectionCore::InjectionCore( HWND& hMainDlg )
 
 InjectionCore::~InjectionCore()
 {
+    blackbone::Driver().Unload();
 }
 
 
