@@ -177,9 +177,6 @@ void MainDlg::Inject()
     {
         SaveConfig();
         CloseDialog();
-
-        // Somehow main thread still waits on GetMessage indefinitely after dialog destruction...
-        TerminateProcess( GetCurrentProcess(), 0 );
         return;
     }
 

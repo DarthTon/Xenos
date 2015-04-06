@@ -44,24 +44,24 @@ public:
     /// <returns>TRUE on success, FALSE otherwise</returns>
     virtual INT_PTR RunModeless( HWND parent = NULL, int accelID = 0 )
     {
-        MSG Msg = { 0 };
+        MSG msg = { 0 };
+        BOOL bRet = FALSE;
+        HACCEL hAccel = LoadAcceleratorsW( NULL, MAKEINTRESOURCEW( accelID ) );
         _modeless = true;
 
-        HACCEL hAccel = LoadAcceleratorsW( NULL, MAKEINTRESOURCEW( accelID ) );
-
         Win32Thunk<DLGPROC, Dialog> dlgProc( &Dialog::DlgProc, this );
-        HWND hDlg = CreateDialogW( NULL, MAKEINTRESOURCE( _dialogID ), parent, dlgProc.GetThunk() );
-        ShowWindow( hDlg, SW_SHOW );
+        _hwnd = CreateDialogW( NULL, MAKEINTRESOURCE( _dialogID ), parent, dlgProc.GetThunk() );
+        ShowWindow( _hwnd, SW_SHOW );
 
-        while (IsWindow( hDlg ) && GetMessage( &Msg, NULL, 0, 0 ))
+        while (IsWindow( _hwnd ) && GetMessage( &msg, NULL, 0, 0 ))
         {
-            if (TranslateAccelerator( hDlg, hAccel, &Msg ))
+            if (TranslateAccelerator( _hwnd, hAccel, &msg ))
                 continue;
 
-            if (!IsDialogMessage( hDlg, &Msg ))
+            if (!IsDialogMessage( _hwnd, &msg ))
             {
-                TranslateMessage( &Msg );
-                DispatchMessage( &Msg );
+                TranslateMessage( &msg );
+                DispatchMessage( &msg );
             } 
         }
 
@@ -76,9 +76,13 @@ protected:
     /// <returns>status</returns>
     INT_PTR CloseDialog()
     {
-        EndDialog( _hwnd, 0 );
         if (_modeless)
+        {
             DestroyWindow( _hwnd );
+            _hwnd = NULL;
+        }
+        else
+            EndDialog( _hwnd, 0 );
 
         return TRUE;
     }
