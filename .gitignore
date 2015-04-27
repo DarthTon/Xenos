@@ -4,7 +4,7 @@
 
 #Visual Studio files
 *.[Oo]bj
-#*.user
+*.user
 *.aps
 *.pch
 *.vspscc
@@ -30,6 +30,7 @@
 *.lastbuildstate
 ipch/
 obj/
+cmake/
 [Bb]in
 [Dd]ebug*/
 [Rr]elease*/
@@ -75,5 +76,4 @@ packages/
 GeneratedFiles*/
 
 *.ggpk
-
-/VADPurge/export.h
+*.idb
