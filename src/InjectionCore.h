@@ -158,7 +158,8 @@ private:
         );
 
 private:
-    HWND& _hMainDlg;             // Owner dialog
-    blackbone::Process _process; // Target process
+    HWND& _hMainDlg;                         // Owner dialog
+    blackbone::Process _process;             // Target process
+    std::vector<DWORD> _criticalProcList;    // List of processes with allocated physical pages
 };
 

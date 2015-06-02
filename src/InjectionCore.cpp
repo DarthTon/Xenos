@@ -11,7 +11,17 @@ InjectionCore::InjectionCore( HWND& hMainDlg )
 
 InjectionCore::~InjectionCore()
 {
-    blackbone::Driver().Unload();
+    //
+    // If at least one process with allocated physical pages exist, prevent driver unload or process will crash
+    // Although PID can be reused, I'm too lazy to implement more reliable detection
+    //
+    std::vector<DWORD> existing, mutual;
+    blackbone::Process::EnumByName( L"", existing );
+    std::sort( existing.begin(), existing.end() );
+    std::sort( _criticalProcList.begin(), _criticalProcList.end() );
+    std::set_intersection( existing.begin(), existing.end(), _criticalProcList.begin(), _criticalProcList.end(), std::back_inserter( mutual ) );
+    if (mutual.empty())
+        blackbone::Driver().Unload();
 }
 
 
@@ -444,6 +454,13 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
             TerminateProcess( pi.hProcess, 0 );*/
 
         CloseHandle( pi.hProcess );
+    }
+
+    // Save PID if using physical memory allocation
+    if (errCode == ERROR_SUCCESS && (pContext->flags & blackbone::HideVAD) && 
+         (pContext->injectMode == Manual || pContext->injectMode == Kernel_MMap))
+    {
+        _criticalProcList.emplace_back( _process.pid() );
     }
 
     if (_process.core().handle())
