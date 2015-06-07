@@ -100,7 +100,7 @@ BEGIN
     COMBOBOX        IDC_OP_TYPE,76,19,110,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     GROUPBOX        "Injection type",IDC_STATIC,7,7,186,37
     GROUPBOX        "Initialization routine",IDC_STATIC,200,46,198,62
-    GROUPBOX        "Process srtaup command line",IDC_STATIC,200,7,198,37
+    GROUPBOX        "Process startup command line",IDC_STATIC,200,7,198,37
     GROUPBOX        "General options",IDC_STATIC,200,115,198,77
     CONTROL         "Close after injection",IDC_INJ_CLOSE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,212,131,80,10
     LTEXT           "Inject delay",IDC_STATIC,214,150,39,8
