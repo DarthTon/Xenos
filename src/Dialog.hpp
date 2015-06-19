@@ -1,7 +1,6 @@
 #pragma once
 
 #include "window.hpp"
-#include "../../BlackBone/src/BlackBone/Misc/Thunk.hpp"
 
 /// <summary>
 /// Generic dialog class
@@ -16,7 +15,7 @@ public:
 
 public:
     Dialog( int dialogID )
-        : _dialogID( dialogID ) 
+        : _dialogID( dialogID )
     { 
         _messages[WM_INITDIALOG] = &Dialog::OnInit;
         _messages[WM_COMMAND]    = &Dialog::OnCommand;
@@ -130,9 +129,9 @@ protected:
     }
 
 protected:
-    mapMsgProc _messages;   // Message handlers
-    mapCtrlProc _events;    // Event handlers
-    int _dialogID = 0;      // Dialog resource ID
-    bool _modeless = false; // Modeless dialog
+    mapMsgProc _messages;       // Message handlers
+    mapCtrlProc _events;        // Event handlers
+    int _dialogID;              // Dialog resource ID
+    bool _modeless = false;     // Modeless dialog
 };
 
