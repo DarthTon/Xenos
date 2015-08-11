@@ -54,7 +54,7 @@ public:
                 // Remove subproc
                 if(_subMessages.empty())
                 {
-                    SetWindowLongPtrW( _hwnd, GWL_WNDPROC, reinterpret_cast<LONG_PTR>(_oldProc) );
+                    SetWindowLongPtrW( _hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_oldProc) );
                     _oldProc = nullptr;
                 }
 
@@ -65,7 +65,7 @@ public:
         {
             _subMessages[message] = std::make_pair( instance ? instance : this, handler );
             if (!_oldProc)
-                _oldProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW( _hwnd, GWL_WNDPROC, reinterpret_cast<LONG_PTR>(_subThunk.GetThunk()) ));
+                _oldProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW( _hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_subThunk.GetThunk()) ));
         }       
     }
 

@@ -1,5 +1,8 @@
 #include "DumpHandler.h"
+
+#pragma warning(disable : 4091)
 #include <DbgHelp.h>
+#pragma warning(default : 4091)
 
 namespace dump
 {
@@ -9,7 +12,7 @@ DumpHandler::DumpHandler( void )
     memset( &_ExceptionInfo, 0x00, sizeof( _ExceptionInfo ) );
 
     // Create new thread to ensure dump creation in case of stack overflow exception
-    _hWatchThd = CreateThread( NULL, 0, &DumpHandler::WatchdogProc, &Instance(), 0, NULL );
+    _hWatchThd = CreateThread( NULL, 0, &DumpHandler::WatchdogProc, this, 0, NULL );
 }
 
 DumpHandler::~DumpHandler( void )
