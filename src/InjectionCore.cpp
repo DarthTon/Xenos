@@ -242,21 +242,21 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
     auto& barrier = _process.core().native()->GetWow64Barrier();
 
     // Validate architecture
-    if (!img.IsPureManaged() && img.mType() == blackbone::mt_mod32 && barrier.targetWow64 == false)
+    if (!img.pureIL() && img.mType() == blackbone::mt_mod32 && barrier.targetWow64 == false)
     {
         Message::ShowError( _hMainDlg, L"Can't inject 32 bit image '" + img.name() + L"' into native 64 bit process" );
         return ERROR_INVALID_IMAGE_HASH;
     }
 
     // Additional validation for kernel manual map
-    if (context.injectMode == Kernel_MMap && !img.IsPureManaged() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
+    if (context.injectMode == Kernel_MMap && !img.pureIL() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
     {
         Message::ShowError( _hMainDlg, L"Can't inject 64 bit image '" + img.name() + L"' into WOW64 process" );
         return ERROR_INVALID_PARAMETER;
     }
 
     // Can't inject managed dll through WOW64 barrier
-    if (img.IsPureManaged() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
+    if (img.pureIL() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
     {
         if (barrier.type == blackbone::wow_32_64)
             Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject managed dll '" + img.name() + L"' into x64 process" );
@@ -283,9 +283,9 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
     // Manual map restrictions
     if (context.injectMode == Manual || context.injectMode == Kernel_MMap)
     {
-        if (img.IsPureManaged())
+        if (img.pureIL() && (context.injectMode == Kernel_MMap || !img.isExe()))
         {
-            Message::ShowError( _hMainDlg, L"Pure managed image '" + img.name() + L"' can't be manually mapped yet" );
+            Message::ShowError( _hMainDlg, L"Pure managed class library '" + img.name() + L"' can't be manually mapped yet" );
             return ERROR_INVALID_PARAMETER;
         }
 
@@ -328,10 +328,17 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
 DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, blackbone::pe::PEImage& img )
 {
     // Validate init routine
-    if (img.IsPureManaged())
+    if (img.pureIL())
     {
+        // Pure IL exe doesn't need init routine
+        if (img.isExe())
+        {
+            initRVA = 0;
+            return ERROR_SUCCESS;
+        };
+
         blackbone::ImageNET::mapMethodRVA methods;
-        img.net().Parse( methods );
+        img.net().Parse( &methods );
         bool found = false;
 
         if (!methods.empty() && !init.empty())
@@ -362,7 +369,6 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
             }
 
             return ERROR_NOT_FOUND;
-
         }
     }
     else if (!init.empty())
@@ -549,7 +555,7 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
     }
 
     // Fix error code
-    if (!img.IsPureManaged() && mod == nullptr && context.injectMode < Kernel_Thread && errCode == ERROR_SUCCESS)
+    if (!img.pureIL() && mod == nullptr && context.injectMode < Kernel_Thread && errCode == ERROR_SUCCESS)
         errCode = STATUS_UNSUCCESSFUL;
 
     // Initialize routine
@@ -604,7 +610,7 @@ DWORD InjectionCore::InjectDefault(
     )
 {
     // Pure IL image
-    if (img.IsPureManaged())
+    if (img.pureIL())
     {
         DWORD code = 0;
 
@@ -712,7 +718,7 @@ DWORD InjectionCore::CallInitRoutine(
     )
 {
     // Call init for native image
-    if (!context.initRoutine.empty() && !img.IsPureManaged() && context.injectMode < Kernel_Thread)
+    if (!context.initRoutine.empty() && !img.pureIL() && context.injectMode < Kernel_Thread)
     {
         auto fnPtr = mod->baseAddress + exportRVA;
 

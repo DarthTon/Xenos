@@ -16,10 +16,28 @@
 
 class MainDlg : public Dialog
 {
+public:
+    enum StartAction
+    {
+        Nothing = 0,
+        LoadProfile,
+        RunProfile
+    };
 
 public:
-    MainDlg( const std::wstring& defConfig = L"" );
+    MainDlg( StartAction action, const std::wstring& defConfig = L"" );
     ~MainDlg();
+
+    /// <summary>
+    /// Run injection profile
+    /// </summary>
+    /// <returns>Error code</returns>
+    int LoadAndInject()
+    {
+        LoadConfig( _defConfig );
+        Inject();
+        return 0;
+    }
 
 private:
     /// <summary>
@@ -35,6 +53,11 @@ private:
     DWORD SaveConfig( const std::wstring& path = L"" );
 
     /// <summary>
+    /// Async inject routine
+    /// </summary>
+    void Inject();
+
+    /// <summary>
     /// Enumerate processes
     /// </summary>
     /// <returns>Error code</returns>
@@ -46,11 +69,6 @@ private:
     /// <param name="path">Process path.</param>
     /// <returns>Error code</returns>
     DWORD SetActiveProcess( DWORD pid, const std::wstring& name );
-
-    /// <summary>
-    /// Async inject routine
-    /// </summary>
-    void Inject();
 
     /// <summary>
     /// Update interface controls
@@ -116,7 +134,9 @@ private:
 
     MSG_HANDLER( OnEjectModules );
     MSG_HANDLER( OnProtectSelf );
+
 private:
+    StartAction     _action;        // Starting action
     std::wstring    _defConfig;     // Profile to load on start
     InjectionCore   _core;          // Injection implementation
     ProfileMgr      _profileMgr;    // Configuration manager

@@ -4,15 +4,16 @@
 #include <future>
 #include <shellapi.h>
 
-MainDlg::MainDlg( const std::wstring& defConfig /*= L""*/ )
+MainDlg::MainDlg( MainDlg::StartAction action, const std::wstring& defConfig /*= L""*/ )
     : Dialog( IDD_MAIN )
     , _core( _hwnd )
+    , _action( action )
     , _defConfig( defConfig )
 {
-    _messages[WM_INITDIALOG] = static_cast<Dialog::fnDlgProc>(&MainDlg::OnInit);
-    _messages[WM_COMMAND]    = static_cast<Dialog::fnDlgProc>(&MainDlg::OnCommand);
-    _messages[WM_CLOSE]      = static_cast<Dialog::fnDlgProc>(&MainDlg::OnClose);
-    _messages[WM_DROPFILES]  = static_cast<Dialog::fnDlgProc>(&MainDlg::OnDragDrop);
+    _messages[WM_INITDIALOG]        = static_cast<Dialog::fnDlgProc>(&MainDlg::OnInit);
+    _messages[WM_COMMAND]           = static_cast<Dialog::fnDlgProc>(&MainDlg::OnCommand);
+    _messages[WM_CLOSE]             = static_cast<Dialog::fnDlgProc>(&MainDlg::OnClose);
+    _messages[WM_DROPFILES]         = static_cast<Dialog::fnDlgProc>(&MainDlg::OnDragDrop);
 
     _events[IDC_EXECUTE]            = static_cast<Dialog::fnDlgProc>(&MainDlg::OnExecute);
     _events[IDC_SETTINGS]           = static_cast<Dialog::fnDlgProc>(&MainDlg::OnSettings);
@@ -63,6 +64,10 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
     // Set dialog title
     SetWindowTextW( _hwnd, blackbone::Utils::RandomANString().c_str() );
 
+    // UAC drop-down bypass
+    ChangeWindowMessageFilterEx( hDlg, WM_DROPFILES, MSGFLT_ADD, nullptr );
+    ChangeWindowMessageFilterEx( hDlg, 0x49/*WM_COPYGLOBALDATA*/, MSGFLT_ADD, nullptr );
+
     // Protection option
     if (blackbone::Driver().loaded())
         EnableMenuItem( GetMenu( _hwnd ), ID_TOOLS_PROTECT, MF_ENABLED );
@@ -85,10 +90,10 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 #else
     _status.SetText( 1, L"x86" );
 #endif
-
     _status.SetText( 2, L"Idle" );
 
     LoadConfig( _defConfig );
+
     return TRUE;
 }
 
@@ -225,13 +230,17 @@ INT_PTR MainDlg::OnDragDrop( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
             _profileMgr.config().initRoutine = L"";
     }
 
-    return TRUE;
+    return 0;
 }
 
 INT_PTR MainDlg::OnLoadProfile( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     std::wstring path;
+#ifdef USE64
+    if (OpenSaveDialog( L"Xenos profiles (*.xpr64)\0*.xpr64\0", 1, path ))
+#else
     if (OpenSaveDialog( L"Xenos profiles (*.xpr)\0*.xpr\0", 1, path ))
+#endif
     {
         // Reset loaded images
         _profileMgr.config().images.clear();
@@ -249,7 +258,11 @@ INT_PTR MainDlg::OnLoadProfile( HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 INT_PTR MainDlg::OnSaveProfile( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     std::wstring path;
+#ifdef USE64
+    if (OpenSaveDialog( L"Xenos profiles (*.xpr64)\0*.xpr64\0", 1, path, true, L"xpr64" ))
+#else
     if (OpenSaveDialog( L"Xenos profiles (*.xpr)\0*.xpr\0", 1, path, true, L"xpr" ))
+#endif
     {
         SaveConfig( path );
         _status.SetText( 0, blackbone::Utils::StripPath( path ) );
