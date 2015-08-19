@@ -312,10 +312,10 @@ DWORD MainDlg::LoadImageFile( const std::wstring& path )
     }
 
     // In case of pure IL, list all methods
-    if (img.IsPureManaged() && img.net().Init( path ))
+    if (img.pureIL() && img.net().Init( path ))
     {
         blackbone::ImageNET::mapMethodRVA methods;
-        img.net().Parse( methods );
+        img.net().Parse( &methods );
 
         for (auto& entry : methods)
         {

@@ -45,6 +45,8 @@ void AssociateExtension()
         SHSetValue( HKEY_CLASSES_ROOT, subkey.c_str(), regValue, REG_SZ, value.c_str(), (DWORD)(value.size() * sizeof( wchar_t )) );
     };
 
+    SHDeleteKeyW( HKEY_CLASSES_ROOT, alias.c_str() );
+
     AddKey( ext, alias );
     AddKey( ext, L"Application/xml", L"Content Type" );
     AddKey( alias, desc );
