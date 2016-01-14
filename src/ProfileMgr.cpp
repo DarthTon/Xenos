@@ -51,9 +51,13 @@ bool ProfileMgr::Load( const std::wstring& path /*= L""*/ )
         acut::XmlDoc<wchar_t> xml;
         xml.read_from_file( filepath );
 
-        auto nodes = xml.all_nodes_named( L"XenosConfig.imagePath" );
-        for (auto& node : nodes)
-            _config.images.emplace_back( node.value() );
+        // Load images in a safe way
+        if(xml.has( L"XenosConfig.imagePath" ))
+        {
+            auto nodes = xml.all_nodes_named( L"XenosConfig.imagePath" );
+            for (auto& node : nodes)
+                _config.images.emplace_back( node.value() );
+        }
 
         xml.get_if_present( L"XenosConfig.manualMapFlags",  _config.manualMapFlags );
         xml.get_if_present( L"XenosConfig.procName",        _config.procName );

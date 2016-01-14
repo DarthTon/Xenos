@@ -296,13 +296,14 @@ INT_PTR MainDlg::OnEjectModules( HWND hDlg, UINT message, WPARAM wParam, LPARAM 
     auto pid = _procList.itemData( _procList.selection() );
 
     // Try attaching to current selection
-    if (_core.process().pid() != pid)
+    if (pid > 0 && _core.process().pid() != pid)
     {
         auto status = _core.process().Attach( pid );
         if (status != STATUS_SUCCESS)
         {
             std::wstring errmsg = L"Can not attach to process.\n" + blackbone::Utils::GetErrorDescription( status );
             Message::ShowError( hDlg, errmsg );
+            return TRUE;
         }
     }
 
