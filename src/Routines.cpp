@@ -216,9 +216,11 @@ DWORD MainDlg::UpdateInterface( )
         _autoProc.enable();
     }
 
-    // Disable inject button if no images available
-    if (_images.empty())
+    // Disable inject button if no images available or no process selected
+    if (_images.empty() || _procList.selection() == -1)
         _inject.disable();
+    else
+        _inject.enable();
 
     return ERROR_SUCCESS;
 }

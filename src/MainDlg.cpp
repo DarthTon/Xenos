@@ -99,7 +99,9 @@ INT_PTR MainDlg::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 
 INT_PTR MainDlg::OnClose( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
-    SaveConfig();
+    if(_procList.selection() != -1 && !_images.empty())
+        SaveConfig();
+
     return Dialog::OnClose( hDlg, message, wParam, lParam );
 }
 
@@ -120,6 +122,7 @@ INT_PTR MainDlg::OnSelChange( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
         auto path = _procList.selectedText().substr( 0, _procList.selectedText().find( L'(' ) - 1 );
 
         SetActiveProcess( pid, path );
+        UpdateInterface();
     }
 
     return TRUE;
@@ -213,6 +216,8 @@ INT_PTR MainDlg::OnSelectExecutable( HWND hDlg, UINT message, WPARAM wParam, LPA
     std::wstring path;
     if (SelectExecutable( path ))
         SetActiveProcess( 0, path );
+    else
+        _procList.reset();
 
     UpdateInterface( );
     return TRUE;

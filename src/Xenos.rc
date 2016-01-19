@@ -166,6 +166,7 @@ END
 // remains consistent on all systems.
 IDI_ICON1               ICON                    "alien.ico"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Menu
@@ -192,8 +193,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,2,0,0
- PRODUCTVERSION 2,2,0,0
+ FILEVERSION 2,2,1,0
+ PRODUCTVERSION 2,2,1,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -209,12 +210,12 @@ BEGIN
         BLOCK "040004b0"
         BEGIN
             VALUE "FileDescription", "PE injector"
-            VALUE "FileVersion", "2.2.0.0"
+            VALUE "FileVersion", "2.2.1.0"
             VALUE "InternalName", "Xenos.exe"
             VALUE "LegalCopyright", "Copyright (C) 2015"
             VALUE "OriginalFilename", "Xenos.exe"
             VALUE "ProductName", "Xenos"
-            VALUE "ProductVersion", "2.2.0.0"
+            VALUE "ProductVersion", "2.2.1.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -242,9 +243,13 @@ END
 //
 
 IDR_DRV7                DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
+
 IDR_DRV8                DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
+
 IDR_DRV81               DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
+
 IDR_DRV10               DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
+
 #endif    // Neutral (Default) resources
 /////////////////////////////////////////////////////////////////////////////
 

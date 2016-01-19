@@ -88,7 +88,7 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         xlog::Normal( "Creating new process '%ls' with arguments '%ls'", context.procPath.c_str(), context.procCmdLine.c_str() );
 
         if (!CreateProcessW( context.procPath.c_str(), (LPWSTR)context.procCmdLine.c_str(),
-            NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, &si, &pi ))
+            NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, blackbone::Utils::GetParent( context.procPath ).c_str(), &si, &pi ))
         {
             Message::ShowError( _hMainDlg, L"Failed to create new process.\n" + blackbone::Utils::GetErrorDescription( LastNtStatus() ) );
             return GetLastError();
