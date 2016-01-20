@@ -122,7 +122,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
             {
                 STARTUPINFOW si = { 0 };
                 PROCESS_INFORMATION pi = { 0 };
-                wchar_t windir[255];
+                wchar_t windir[255] = { 0 };
                 PVOID oldVal = nullptr;
 
                 GetWindowsDirectoryW( windir, sizeof( windir ) );
@@ -130,7 +130,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
 
                 Wow64DisableWow64FsRedirection( &oldVal );
 
-                // For some reason running Bcdedit directly does not enable test signing from WOW64 process
+                // For some reason running BCDedit directly does not enable test signing from WOW64 process
                 if (CreateProcessW( bcdpath.c_str(), L"/C Bcdedit.exe -set TESTSIGNING ON", NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ))
                 {
                     Message::ShowWarning( _hwnd, L"You must reboot your computer for the changes to take effect" );
@@ -139,7 +139,10 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
                     CloseHandle( pi.hThread );
                 }
                 else
+                {
                     Message::ShowError( _hwnd, L"Failed to enable Test signing. Please do it manually" );
+                    status = LastNtStatus();
+                }
 
                 Wow64RevertWow64FsRedirection( oldVal );
             }

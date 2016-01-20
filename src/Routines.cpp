@@ -332,7 +332,9 @@ DWORD MainDlg::LoadImageFile( const std::wstring& path )
     // Add to internal lists
     AddToModuleList( img );
     _exports.emplace_back( exports );
-    _inject.enable();
+
+    if (_procList.selection() != -1)
+        _inject.enable();
 
     return ERROR_SUCCESS;
 }
