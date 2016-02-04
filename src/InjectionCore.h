@@ -8,7 +8,7 @@
 #include "../../BlackBone/src/BlackBone/PE/PEImage.h"
 #include "../../BlackBone/src/BlackBone/Misc/Utils.h"
 
-typedef std::vector<blackbone::pe::PEImage> vecPEImages;
+typedef std::vector<std::shared_ptr<blackbone::pe::PEImage>> vecPEImages;
 typedef std::vector<blackbone::pe::vecExports> vecImageExports;
 
 enum MapMode
@@ -76,12 +76,6 @@ public:
     /// <param name="pCtx">Injection context</param>
     /// <returns>Error code</returns>
     DWORD InjectMultiple( InjectContext* pContext );
-
-    /// <summary>
-    /// Waits for the injection thread to finish
-    /// </summary>
-    /// <returns>Injection status</returns>
-    DWORD WaitOnInjection( InjectContext& pContext );
 
     inline blackbone::Process& process() { return _process; }
 

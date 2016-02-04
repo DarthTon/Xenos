@@ -82,7 +82,7 @@ DWORD MainDlg::SaveConfig( const std::wstring& path /*= L""*/ )
     cfg.procName = _processPath;
     cfg.images.clear();
     for (auto& img : _images)
-        cfg.images.emplace_back( img.path() );
+        cfg.images.emplace_back( img->path() );
 
     cfg.processMode = (_exProc ? Existing : (_newProc ? NewProcess : ManualLaunch));
 
@@ -292,32 +292,32 @@ bool MainDlg::OpenSaveDialog(
 /// <returns>Error code </returns>
 DWORD MainDlg::LoadImageFile( const std::wstring& path )
 {
-    blackbone::pe::PEImage img;
+    std::shared_ptr<blackbone::pe::PEImage> img( new blackbone::pe::PEImage );
     blackbone::pe::vecExports exports;
 
     // Check if image is already in the list
     if (std::find_if( _images.begin(), _images.end(),
-        [&path]( const blackbone::pe::PEImage& img ) { return path == img.path(); } ) != _images.end())
+        [&path]( auto& img ) { return path == img->path(); } ) != _images.end())
     {
         Message::ShowInfo( _hwnd, L"Image '" + path + L"' is already in the list" );
         return ERROR_ALREADY_EXISTS;
     }
 
     // Check if image is a PE file
-    if (!NT_SUCCESS( img.Load( path ) ))
+    if (!NT_SUCCESS( img->Load( path ) ))
     {
         std::wstring errstr = std::wstring( L"File \"" ) + path + L"\" is not a valid PE image";
         Message::ShowError( _hwnd, errstr.c_str() );
 
-        img.Release();
+        img->Release();
         return ERROR_INVALID_IMAGE_HASH;
     }
 
     // In case of pure IL, list all methods
-    if (img.pureIL() && img.net().Init( path ))
+    if (img->pureIL() && img->net().Init( path ))
     {
         blackbone::ImageNET::mapMethodRVA methods;
-        img.net().Parse( &methods );
+        img->net().Parse( &methods );
 
         for (auto& entry : methods)
         {
@@ -327,8 +327,9 @@ DWORD MainDlg::LoadImageFile( const std::wstring& path )
     }
     // Simple exports otherwise
     else
-        img.GetExports( exports );
+        img->GetExports( exports );
 
+    
     // Add to internal lists
     AddToModuleList( img );
     _exports.emplace_back( exports );
@@ -336,6 +337,7 @@ DWORD MainDlg::LoadImageFile( const std::wstring& path )
     if (_procList.selection() != -1)
         _inject.enable();
 
+    img->Release( true );
     return ERROR_SUCCESS;
 }
 
@@ -344,18 +346,18 @@ DWORD MainDlg::LoadImageFile( const std::wstring& path )
 /// </summary>
 /// <param name="path">Loaded image</param>
 /// <param name="exports">Module exports</param>
-void MainDlg::AddToModuleList( const blackbone::pe::PEImage& img )
+void MainDlg::AddToModuleList( std::shared_ptr<blackbone::pe::PEImage>& img )
 {
     wchar_t* platfom = nullptr;
 
     // Module platform
-    if (img.mType() == blackbone::mt_mod32)
+    if (img->mType() == blackbone::mt_mod32)
         platfom = L"32 bit";
-    else if (img.mType() == blackbone::mt_mod64)
+    else if (img->mType() == blackbone::mt_mod64)
         platfom = L"64 bit";
     else
         platfom = L"Unknown";
 
     _images.emplace_back( img );
-    _modules.AddItem( blackbone::Utils::StripPath( img.path() ), 0, { platfom } );
+    _modules.AddItem( blackbone::Utils::StripPath( img->path() ), 0, { platfom } );
 }

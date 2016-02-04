@@ -438,7 +438,7 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     // Inject all images
     for (auto& img : pContext->images)
     {
-        errCode |= InjectSingle( *pContext, img );
+        errCode |= InjectSingle( *pContext, *img );
         if (pContext->period)
             Sleep( pContext->period );
     }
@@ -533,8 +533,9 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
 
             case Manual:
                 mod = _process.mmap().MapImage( img.path(), blackbone::RebaseProcess | blackbone::NoDelayLoad | context.flags );
+                errCode = LastNtStatus();
                 if (!mod)
-                    xlog::Error( "Failed to inject image using manual map, status: 0x%X", LastNtStatus() );
+                    xlog::Error( "Failed to inject image using manual map, status: 0x%X", errCode );
                 break;
 
             case Kernel_Thread:
@@ -609,6 +610,8 @@ DWORD InjectionCore::InjectDefault(
     const blackbone::ModuleData* &mod
     )
 {
+    NTSTATUS status = STATUS_SUCCESS;
+
     // Pure IL image
     if (img.pureIL())
     {
@@ -647,13 +650,12 @@ DWORD InjectionCore::InjectDefault(
     }
     else
     {
-        NTSTATUS status = STATUS_SUCCESS;
         mod = _process.modules().Inject( img.path(), &status );
         if (!NT_SUCCESS( status ))
             xlog::Error( "Failed to inject image using default injection, status: 0x%X", status );
     }
 
-    return mod != nullptr ? ERROR_SUCCESS : ERROR_FUNCTION_FAILED;
+    return mod != nullptr ? ERROR_SUCCESS : status;
 }
 
 /// <summary>

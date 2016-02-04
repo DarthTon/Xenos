@@ -94,7 +94,7 @@ private:
     /// Add module to module list
     /// </summary>
     /// <param name="path">Loaded image</param>
-    void AddToModuleList( const blackbone::pe::PEImage& img );
+    void AddToModuleList( std::shared_ptr<blackbone::pe::PEImage>& img );
 
     /// <summary>
     /// Invoke Open/Save file dialog
