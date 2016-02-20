@@ -297,7 +297,7 @@ DWORD MainDlg::LoadImageFile( const std::wstring& path )
 
     // Check if image is already in the list
     if (std::find_if( _images.begin(), _images.end(),
-        [&path]( auto& img ) { return path == img->path(); } ) != _images.end())
+        [&path]( std::shared_ptr<blackbone::pe::PEImage>& img ) { return path == img->path(); } ) != _images.end())
     {
         Message::ShowInfo( _hwnd, L"Image '" + path + L"' is already in the list" );
         return ERROR_ALREADY_EXISTS;

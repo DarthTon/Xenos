@@ -41,19 +41,19 @@ void AssociateExtension()
     std::wstring runWith = std::wstring( tmp ) + L" --run %1";
     std::wstring icon = std::wstring( tmp ) + L",-" + std::to_wstring( IDI_ICON1 );
 
-    auto AddKey = []( const std::wstring& subkey, const std::wstring& value, const wchar_t* regValue = nullptr ) {
+    auto AddKey = []( const std::wstring& subkey, const std::wstring& value, const wchar_t* regValue ) {
         SHSetValue( HKEY_CLASSES_ROOT, subkey.c_str(), regValue, REG_SZ, value.c_str(), (DWORD)(value.size() * sizeof( wchar_t )) );
     };
 
     SHDeleteKeyW( HKEY_CLASSES_ROOT, alias.c_str() );
 
-    AddKey( ext, alias );
+    AddKey( ext, alias, nullptr );
     AddKey( ext, L"Application/xml", L"Content Type" );
-    AddKey( alias, desc );
-    AddKey( alias + L"\\shell", L"Run" );
-    AddKey( alias + L"\\shell\\Edit\\command", editWith );
-    AddKey( alias + L"\\shell\\Run\\command", runWith );
-    AddKey( alias + L"\\DefaultIcon", icon );
+    AddKey( alias, desc, nullptr );
+    AddKey( alias + L"\\shell", L"Run", nullptr );
+    AddKey( alias + L"\\shell\\Edit\\command", editWith, nullptr );
+    AddKey( alias + L"\\shell\\Run\\command", runWith, nullptr );
+    AddKey( alias + L"\\DefaultIcon", icon, nullptr );
 }
 
 
