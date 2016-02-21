@@ -57,6 +57,7 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         blackbone::Process::EnumByNameOrPID( 0, procName, existing );
 
         // Wait for process
+        int32_t found = 0;
         for (context.waitActive = true;; Sleep( 10 ))
         {
             // Canceled by user
@@ -73,6 +74,14 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
 
             if (!diff.empty())
             {
+                // Skip first N found processes
+                if (found < context.skipProc)
+                {
+                    existing = newList;
+                    found++;
+                    continue;
+                }
+
                 context.pid = diff.front().pid;
                 xlog::Verbose( "Got process %d", context.pid );
                 break;

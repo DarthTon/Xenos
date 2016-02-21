@@ -78,6 +78,7 @@ private:
     ctrl::EditBox  _initArg;        // Init routine argument
     ctrl::EditBox  _delay;          // Delay before inject
     ctrl::EditBox  _period;         // Period between images
+    ctrl::EditBox  _skipProc;       // Skip N first processes
 
     ctrl::Button _injClose;         // Close application after injection
     ctrl::Button _unlink;           // Unlink image after injection   

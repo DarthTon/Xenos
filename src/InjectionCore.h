@@ -47,6 +47,7 @@ struct InjectContext
 
     uint32_t delay = 0;                                 // Delay before injection
     uint32_t period = 0;                                // Period between images
+    uint32_t skipProc = 0;                              // Skip N first processes
 
     std::wstring procPath;                              // Process path
     std::wstring procCmdLine;                           // Process command line

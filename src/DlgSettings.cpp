@@ -33,6 +33,8 @@ INT_PTR DlgSettings::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
     _delay.Attach( _hwnd, IDC_DELAY );
     _period.Attach( _hwnd, IDC_PERIOD );
 
+    _skipProc.Attach( _hwnd, IDC_SKIP );
+
     _mmapOptions.addLdrRef.Attach( GetDlgItem( _hwnd, IDC_LDR_REF ) );
     _mmapOptions.manualInmport.Attach( GetDlgItem( _hwnd, IDC_MANUAL_IMP ) );
     _mmapOptions.noTls.Attach( GetDlgItem( _hwnd, IDC_IGNORE_TLS ) );
@@ -170,6 +172,7 @@ DWORD DlgSettings::UpdateFromConfig()
 
     _delay.text( std::to_wstring( cfg.delay ) );
     _period.text( std::to_wstring( cfg.period ) );
+    _skipProc.text( std::to_wstring( cfg.skipProc ) );
 
     _unlink.checked( cfg.unlink );
     _erasePE.checked( cfg.erasePE );
@@ -207,6 +210,7 @@ DWORD DlgSettings::SaveConfig()
     cfg.krnHandle      = _krnHandle.checked();
     cfg.delay          = _delay.integer();
     cfg.period         = _period.integer();
+    cfg.skipProc       = _skipProc.integer();
 
     _profileMgr.Save();
     return ERROR_SUCCESS;
@@ -220,8 +224,6 @@ void DlgSettings::UpdateInterface()
     // Reset controls state
     auto& cfg = _profileMgr.config();
 
-    cfg.processMode == NewProcess ? _procCmdLine.enable() : _procCmdLine.disable();
-
     _hijack.enable();
     _initFuncList.enable();
     _initArg.enable();
@@ -230,6 +232,23 @@ void DlgSettings::UpdateInterface()
 
     if (blackbone::Driver().loaded())
         _krnHandle.enable();
+
+    switch (cfg.processMode)
+    {
+    case NewProcess:
+        _procCmdLine.enable();
+        _skipProc.disable();
+        break;
+    case Existing:
+        _procCmdLine.disable();
+        _skipProc.disable();
+        break;
+    case ManualLaunch:
+        _procCmdLine.disable();
+        _skipProc.enable();
+        break;
+    };
+
 
     switch (cfg.injectMode)
     {

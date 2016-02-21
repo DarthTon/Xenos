@@ -60,6 +60,8 @@
 #define IDC_PERIOD                      1030
 #define IDC_CHECK1                      1031
 #define IDC_KRN_HANDLE                  1031
+#define IDC_DELAY2                      1032
+#define IDC_SKIP                        1032
 #define ID_TOOLS_EJECTMODULES           32772
 #define ID_TOOLS_PROTECTSELF            32773
 #define ID_TOOLS_PROTECT                32774

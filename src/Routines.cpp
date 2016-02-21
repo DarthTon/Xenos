@@ -157,6 +157,7 @@ void MainDlg::Inject()
     context.krnHandle = cfg.krnHandle;
     context.delay = cfg.delay;
     context.period = cfg.period;
+    context.skipProc = cfg.skipProc;
 
     _status.SetText( 2, L"Injecting..." );
 

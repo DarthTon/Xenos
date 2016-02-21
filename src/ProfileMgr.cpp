@@ -26,6 +26,7 @@ bool ProfileMgr::Save( const std::wstring& path /*= L""*/)
         xml.set( L"XenosConfig.injectMode",     _config.injectMode );
         xml.set( L"XenosConfig.delay",          _config.delay );
         xml.set( L"XenosConfig.period",         _config.period );
+        xml.set( L"XenosConfig.skip",           _config.skipProc );
         xml.set( L"XenosConfig.procCmdLine",    _config.procCmdLine.c_str() );
         xml.set( L"XenosConfig.initRoutine",    _config.initRoutine.c_str() );
         xml.set( L"XenosConfig.initArgs",       _config.initArgs.c_str() );
@@ -70,6 +71,7 @@ bool ProfileMgr::Load( const std::wstring& path /*= L""*/ )
         xml.get_if_present( L"XenosConfig.injectMode",      _config.injectMode );
         xml.get_if_present( L"XenosConfig.delay",           _config.delay );
         xml.get_if_present( L"XenosConfig.period",          _config.period );
+        xml.get_if_present( L"XenosConfig.skip",            _config.skipProc );
         xml.get_if_present( L"XenosConfig.procCmdLine",     _config.procCmdLine );
         xml.get_if_present( L"XenosConfig.initRoutine",     _config.initRoutine );
         xml.get_if_present( L"XenosConfig.initArgs",        _config.initArgs );

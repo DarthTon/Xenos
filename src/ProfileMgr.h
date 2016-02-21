@@ -20,6 +20,7 @@ public:
         uint32_t injectMode = 0;        // Injection type
         uint32_t delay = 0;             // Delay before injection
         uint32_t period = 0;            // Delay between images
+        uint32_t skipProc = 0;          // Skip N first processes
         
         bool hijack = false;            // Hijack existing thread
         bool unlink = false;            // Unlink image after injection

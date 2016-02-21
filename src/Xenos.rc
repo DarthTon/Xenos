@@ -111,6 +111,8 @@ BEGIN
     LTEXT           "ms",IDC_STATIC,296,173,10,8
     CONTROL         "Use existing thread",IDC_HIJACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,87,78,10
     CONTROL         "Escalate handle acess",IDC_KRN_HANDLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,311,131,86,10
+    LTEXT           "Skip count",IDC_STATIC,311,150,34,8
+    EDITTEXT        IDC_SKIP,352,148,45,12,ES_AUTOHSCROLL | ES_NUMBER
 END
 
 
