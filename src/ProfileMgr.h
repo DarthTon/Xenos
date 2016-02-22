@@ -15,7 +15,7 @@ public:
         std::wstring initRoutine;       // Dll initialization function
         std::wstring initArgs;          // Arguments passed into init function
 
-        uint32_t manualMapFlags = 0;    // Manual mapping flags
+        uint32_t mmapFlags = 0;    // Manual mapping flags
         uint32_t processMode = 0;       // Process launch mode
         uint32_t injectMode = 0;        // Injection type
         uint32_t delay = 0;             // Delay before injection
@@ -27,6 +27,7 @@ public:
         bool erasePE = false;           // Erase PE headers for native inject
         bool close = false;             // Close app after injection
         bool krnHandle = false;         // Escalate process handle access rights
+        bool injIndef = false;          // Inject indefinitely
     };
 
 public:

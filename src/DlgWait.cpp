@@ -39,7 +39,9 @@ INT_PTR DlgWait::OnCloseBtn( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 /// <returns>Error code</returns>
 DWORD DlgWait::WaitForInjection()
 {
-    _status = _core.InjectMultiple( &_context );
+    for (bool inject = true; inject && _status != ERROR_CANCELLED; inject = _context.cfg.injIndef)
+        _status = _core.InjectMultiple( &_context );
+
     CloseDialog();
     return _status;
 }

@@ -15,13 +15,14 @@ bool ProfileMgr::Save( const std::wstring& path /*= L""*/)
         for (auto& imgpath : _config.images)
             xml.append( L"XenosConfig.imagePath" ).value( imgpath );
 
-        xml.set( L"XenosConfig.manualMapFlags", _config.manualMapFlags );
+        xml.set( L"XenosConfig.manualMapFlags", _config.mmapFlags );
         xml.set( L"XenosConfig.procName",       _config.procName.c_str() );
         xml.set( L"XenosConfig.hijack",         _config.hijack );
         xml.set( L"XenosConfig.unlink",         _config.unlink );
         xml.set( L"XenosConfig.erasePE",        _config.erasePE );
         xml.set( L"XenosConfig.close",          _config.close );
         xml.set( L"XenosConfig.krnHandle",      _config.krnHandle );
+        xml.set( L"XenosConfig.injIndef",       _config.injIndef );
         xml.set( L"XenosConfig.processMode",    _config.processMode );
         xml.set( L"XenosConfig.injectMode",     _config.injectMode );
         xml.set( L"XenosConfig.delay",          _config.delay );
@@ -60,13 +61,14 @@ bool ProfileMgr::Load( const std::wstring& path /*= L""*/ )
                 _config.images.emplace_back( node.value() );
         }
 
-        xml.get_if_present( L"XenosConfig.manualMapFlags",  _config.manualMapFlags );
+        xml.get_if_present( L"XenosConfig.manualMapFlags",  _config.mmapFlags );
         xml.get_if_present( L"XenosConfig.procName",        _config.procName );
         xml.get_if_present( L"XenosConfig.hijack",          _config.hijack );
         xml.get_if_present( L"XenosConfig.unlink",          _config.unlink );
         xml.get_if_present( L"XenosConfig.erasePE",         _config.erasePE );
         xml.get_if_present( L"XenosConfig.close",           _config.close );
         xml.get_if_present( L"XenosConfig.krnHandle",       _config.krnHandle );
+        xml.get_if_present( L"XenosConfig.injIndef",        _config.injIndef );
         xml.get_if_present( L"XenosConfig.processMode",     _config.processMode );
         xml.get_if_present( L"XenosConfig.injectMode",      _config.injectMode );
         xml.get_if_present( L"XenosConfig.delay",           _config.delay );

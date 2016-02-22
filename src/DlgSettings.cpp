@@ -29,6 +29,7 @@ INT_PTR DlgSettings::OnInit( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
     _unlink.Attach( _hwnd, IDC_UNLINK );
     _erasePE.Attach( _hwnd, IDC_WIPE_HDR_NATIVE );
     _krnHandle.Attach( _hwnd, IDC_KRN_HANDLE );
+    _injIndef.Attach( _hwnd, IDC_INJ_EACH );
 
     _delay.Attach( _hwnd, IDC_DELAY );
     _period.Attach( _hwnd, IDC_PERIOD );
@@ -108,7 +109,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
     if (type < Kernel_Thread)
         return STATUS_SUCCESS;
 
-    auto status = blackbone::Driver().status();
+    auto status = blackbone::Driver().EnsureLoaded();
 
     // Try to enable test signing
     if (!NT_SUCCESS( status ))
@@ -177,6 +178,7 @@ DWORD DlgSettings::UpdateFromConfig()
     _unlink.checked( cfg.unlink );
     _erasePE.checked( cfg.erasePE );
     _injClose.checked( cfg.close );
+    _injIndef.checked( cfg.injIndef );
 
     _lastSelected = cfg.injectMode;
     _injectionType.selection( cfg.injectMode );
@@ -185,7 +187,7 @@ DWORD DlgSettings::UpdateFromConfig()
     if (blackbone::Driver().loaded())
         _krnHandle.checked( cfg.krnHandle );
 
-    MmapFlags( (blackbone::eLoadFlags)cfg.manualMapFlags );
+    MmapFlags( (blackbone::eLoadFlags)cfg.mmapFlags );
 
     return ERROR_SUCCESS;
 }
@@ -202,7 +204,7 @@ DWORD DlgSettings::SaveConfig()
     cfg.initRoutine    = _initFuncList.selectedText();
     cfg.initArgs       = _initArg.text();
     cfg.injectMode     = _injectionType.selection();
-    cfg.manualMapFlags = MmapFlags();
+    cfg.mmapFlags = MmapFlags();
     cfg.unlink         = _unlink.checked();
     cfg.erasePE        = _erasePE.checked();
     cfg.close          = _injClose.checked();
@@ -211,6 +213,7 @@ DWORD DlgSettings::SaveConfig()
     cfg.delay          = _delay.integer();
     cfg.period         = _period.integer();
     cfg.skipProc       = _skipProc.integer();
+    cfg.injIndef       = _injIndef.checked();
 
     _profileMgr.Save();
     return ERROR_SUCCESS;
@@ -238,14 +241,17 @@ void DlgSettings::UpdateInterface()
     case NewProcess:
         _procCmdLine.enable();
         _skipProc.disable();
+        _injIndef.disable();
         break;
     case Existing:
         _procCmdLine.disable();
         _skipProc.disable();
+        _injIndef.disable();
         break;
     case ManualLaunch:
         _procCmdLine.disable();
         _skipProc.enable();
+        _injIndef.enable();
         break;
     };
 

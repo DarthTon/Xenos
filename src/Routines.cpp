@@ -53,7 +53,7 @@ DWORD MainDlg::LoadConfig( const std::wstring& path /*= L""*/ )
         }
 
         // Fix injection method
-        if (cfg.injectMode >= Kernel_Thread && !blackbone::Driver().loaded())
+        if (cfg.injectMode >= Kernel_Thread && !NT_SUCCESS( blackbone::Driver().EnsureLoaded() ))
             cfg.injectMode = Normal;
 
         // Update profile name
@@ -142,27 +142,18 @@ void MainDlg::Inject()
     DWORD result = 0;
 
     // Fill in context
-    context.flags = (blackbone::eLoadFlags)cfg.manualMapFlags;
+    context.cfg = cfg;
     context.images = _images;
-    context.initRoutine = blackbone::Utils::WstringToAnsi( cfg.initRoutine );
-    context.initRoutineArg = cfg.initArgs;
-    context.procMode = (ProcMode)cfg.processMode;
-    context.injectMode = (MapMode)cfg.injectMode;
     context.pid = _procList.itemData( _procList.selection() );
-    context.procCmdLine = cfg.procCmdLine;
     context.procPath = _processPath;
-    context.hijack = cfg.hijack;
-    context.unlinkImage = cfg.unlink;
-    context.erasePE = cfg.erasePE;
-    context.krnHandle = cfg.krnHandle;
-    context.delay = cfg.delay;
-    context.period = cfg.period;
-    context.skipProc = cfg.skipProc;
+    context.skippedCount = 0;
+    context.procList.clear();
+    context.procDiff.clear();
 
     _status.SetText( 2, L"Injecting..." );
 
     // Show wait dialog
-    if (context.procMode == ManualLaunch)
+    if (context.cfg.processMode == ManualLaunch)
     {
         DlgWait dlgWait( _core, context );
         dlgWait.RunModal( _hwnd );

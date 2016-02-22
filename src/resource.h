@@ -46,6 +46,8 @@
 #define IDC_INJ_CLOSE                   1018
 #define ID_WAIT_CANCEL                  1018
 #define IDC_EXISTING_PROC               1019
+#define IDC_INJ_EVERY                   1019
+#define IDC_INJ_EACH                    1019
 #define IDC_SELECT_PROC                 1020
 #define IDC_AUTO_PROC                   1021
 #define ID_SETTINGS_CANCEL              1021
@@ -60,7 +62,6 @@
 #define IDC_PERIOD                      1030
 #define IDC_CHECK1                      1031
 #define IDC_KRN_HANDLE                  1031
-#define IDC_DELAY2                      1032
 #define IDC_SKIP                        1032
 #define ID_TOOLS_EJECTMODULES           32772
 #define ID_TOOLS_PROTECTSELF            32773

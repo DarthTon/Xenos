@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Message.hpp"
+#include "ProfileMgr.h"
 #include "Log.h"
 
 #include "../../BlackBone/src/BlackBone/Config.h"
@@ -34,25 +35,16 @@ enum ProcMode
 /// </summary>
 struct InjectContext
 {
-    DWORD pid = 0;                                      // Target process ID
-    vecPEImages images;                                 // Images to inject
-    ProcMode procMode = Existing;                       // Process launch mode
-    MapMode injectMode = Normal;                        // Injection type
-    blackbone::eLoadFlags flags = blackbone::NoFlags;   // Manual map flags
-    bool hijack = false;                                // Hijack existing thread
-    bool unlinkImage = false;                           // Set to true to unlink image after injection
-    bool erasePE = false;                               // Erase PE headers after native injection
-    bool waitActive = false;                            // Process waiting state
-    bool krnHandle = false;                             // Escalate handle access rights
+    ProfileMgr::ConfigData cfg;                     // User config
 
-    uint32_t delay = 0;                                 // Delay before injection
-    uint32_t period = 0;                                // Period between images
-    uint32_t skipProc = 0;                              // Skip N first processes
+    DWORD pid = 0;                                  // Target process ID
+    vecPEImages images;                             // Images to inject
+    std::wstring procPath;                          // Process path
 
-    std::wstring procPath;                              // Process path
-    std::wstring procCmdLine;                           // Process command line
-    std::string  initRoutine;                           // Module initializer
-    std::wstring initRoutineArg;                        // Module initializer params
+    uint32_t skippedCount = 0;                      // Skipped processes    
+    bool waitActive = false;                        // Process waiting state
+    std::vector<blackbone::ProcessInfo> procList;   // Process list
+    std::vector<blackbone::ProcessInfo> procDiff;   // Created processes list
 };
 
 class InjectionCore

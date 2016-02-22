@@ -84,6 +84,7 @@ private:
     ctrl::Button _unlink;           // Unlink image after injection   
     ctrl::Button _erasePE;          // Erase PE headers after injection
     ctrl::Button _krnHandle;        // Escalate handle access rights
+    ctrl::Button _injIndef;         // Inject indefinitely
 
     struct
     {
