@@ -37,9 +37,6 @@
     <ClInclude Include="stdafx.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Targetver.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="DlgModules.h">
       <Filter>Interface\ModuleView</Filter>
     </ClInclude>
@@ -111,6 +108,9 @@
     </ClInclude>
     <ClInclude Include="Log.h">
       <Filter>Log</Filter>
+    </ClInclude>
+    <ClInclude Include="DriverExtract.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

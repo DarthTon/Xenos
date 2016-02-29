@@ -1,4 +1,5 @@
 #include "MainDlg.h"
+#include "DriverExtract.h"
 
 /// <summary>
 /// Load configuration from file
@@ -53,8 +54,15 @@ DWORD MainDlg::LoadConfig( const std::wstring& path /*= L""*/ )
         }
 
         // Fix injection method
-        if (cfg.injectMode >= Kernel_Thread && !NT_SUCCESS( blackbone::Driver().EnsureLoaded() ))
-            cfg.injectMode = Normal;
+        if (cfg.injectMode >= Kernel_Thread)
+        {
+            DriverExtract::Instance().Extract();
+            if (!NT_SUCCESS( blackbone::Driver().EnsureLoaded() ))
+            {
+                DriverExtract::Instance().Cleanup();
+                cfg.injectMode = Normal;
+            }
+        }
 
         // Update profile name
         if (!_defConfig.empty())
@@ -215,19 +223,6 @@ DWORD MainDlg::UpdateInterface( )
         _inject.enable();
 
     return ERROR_SUCCESS;
-}
-
-/// <summary>
-/// Select executable image via file selection dialog
-/// </summary>
-/// <param name="selectedPath">Selected path</param>
-/// <returns>true if image was selected, false if canceled</returns>
-bool MainDlg::SelectExecutable( std::wstring& selectedPath )
-{
-    _profileMgr.config().processMode = _newProc.checked() ? NewProcess : ManualLaunch;
-    auto res = OpenSaveDialog( L"All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0", 2, selectedPath );
-    UpdateInterface();
-    return res;
 }
 
 /// <summary>

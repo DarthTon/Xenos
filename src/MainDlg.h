@@ -77,13 +77,6 @@ private:
     DWORD UpdateInterface();
 
     /// <summary>
-    /// Select executable image via file selection dialog
-    /// </summary>
-    /// <param name="selectedPath">Selected path</param>
-    /// <returns>true if image was selected, false if canceled</returns>
-    bool SelectExecutable( std::wstring& selectedPath );
-
-    /// <summary>
     /// Load selected image and do some validation
     /// </summary>
     /// <param name="path">Full qualified image path</param>

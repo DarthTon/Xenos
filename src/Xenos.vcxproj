@@ -205,6 +205,7 @@
   <ItemGroup>
     <ClInclude Include="Button.hpp" />
     <ClInclude Include="ComboBox.hpp" />
+    <ClInclude Include="DriverExtract.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="ProfileMgr.h" />
     <ClInclude Include="Control.hpp" />
@@ -225,7 +226,6 @@
     <ClInclude Include="rapidxml_wrap.hpp" />
     <ClInclude Include="StatusBar.hpp" />
     <ClInclude Include="StringUtil.h" />
-    <ClInclude Include="Targetver.h" />
     <ClInclude Include="MainDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />

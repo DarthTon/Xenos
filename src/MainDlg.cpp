@@ -206,6 +206,7 @@ INT_PTR MainDlg::OnSettings( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 
 INT_PTR MainDlg::OnExistingProcess( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
+    _profileMgr.config().processMode = Existing;
     _procList.reset();
     UpdateInterface();
     return TRUE;
@@ -214,11 +215,12 @@ INT_PTR MainDlg::OnExistingProcess( HWND hDlg, UINT message, WPARAM wParam, LPAR
 INT_PTR MainDlg::OnSelectExecutable( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     std::wstring path;
-    if (SelectExecutable( path ))
+    if (OpenSaveDialog( L"All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0", 2, path ))
         SetActiveProcess( 0, path );
     else
         _procList.reset();
 
+    _profileMgr.config().processMode = _newProc.checked() ? NewProcess : ManualLaunch;
     UpdateInterface( );
     return TRUE;
 }

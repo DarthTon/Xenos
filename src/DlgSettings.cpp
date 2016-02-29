@@ -1,4 +1,5 @@
 #include "DlgSettings.h"
+#include "DriverExtract.h"
 #include "resource.h"
 
 DlgSettings::DlgSettings( ProfileMgr& cfgMgr )
@@ -109,6 +110,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
     if (type < Kernel_Thread)
         return STATUS_SUCCESS;
 
+    DriverExtract::Instance().Extract();
     auto status = blackbone::Driver().EnsureLoaded();
 
     // Try to enable test signing
@@ -152,6 +154,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
         }
 
         // Revert selection
+        DriverExtract::Instance().Cleanup();
         _injectionType.selection( _lastSelected );
     }
 
@@ -204,7 +207,7 @@ DWORD DlgSettings::SaveConfig()
     cfg.initRoutine    = _initFuncList.selectedText();
     cfg.initArgs       = _initArg.text();
     cfg.injectMode     = _injectionType.selection();
-    cfg.mmapFlags = MmapFlags();
+    cfg.mmapFlags      = MmapFlags();
     cfg.unlink         = _unlink.checked();
     cfg.erasePE        = _erasePE.checked();
     cfg.close          = _injClose.checked();
