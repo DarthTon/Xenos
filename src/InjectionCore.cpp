@@ -203,13 +203,13 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         if (_process.core().isWow64())
         {
             blackbone::_PEB32 peb32 = { 0 };
-            _process.core().peb( &peb32 );
+            _process.core().peb32( &peb32 );
             ldrInit = peb32.Ldr != 0;
         }
         else
         {
             blackbone::_PEB64 peb64 = { 0 };
-            _process.core().peb( &peb64 );
+            _process.core().peb64( &peb64 );
             ldrInit = peb64.Ldr != 0;
         }
 
