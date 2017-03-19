@@ -61,14 +61,14 @@ public:
     /// <param name="context">Injection context.</param>
     /// <param name="pi">Process info in case of new process</param>
     /// <returns>Error code</returns>
-    DWORD GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi );
+    NTSTATUS GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi );
 
     /// <summary>
     /// Inject multiple images
     /// </summary>
     /// <param name="pCtx">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD InjectMultiple( InjectContext* pContext );
+    NTSTATUS InjectMultiple( InjectContext* pContext );
 
     inline blackbone::Process& process() { return _process; }
 
@@ -79,21 +79,21 @@ private:
     /// <param name="init">Routine name</param>
     /// <param name="initRVA">Routine RVA, if found</param>
     /// <returns>Error code</returns>
-    DWORD ValidateInit( const std::string& init, uint32_t& initRVA, blackbone::pe::PEImage& img );
+    NTSTATUS ValidateInit( const std::string& init, uint32_t& initRVA, blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Validate all parameters
     /// </summary>
     /// <param name="context">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD ValidateContext( InjectContext& context, const blackbone::pe::PEImage& img );
+    NTSTATUS ValidateContext( InjectContext& context, const blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Injector thread worker
     /// </summary>
     /// <param name="context">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD InjectSingle( InjectContext& context, blackbone::pe::PEImage& img );
+    NTSTATUS InjectSingle( InjectContext& context, blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Default injection method
@@ -102,11 +102,10 @@ private:
     /// <param name="pThread">Context thread of execution</param>
     /// <param name="mod">Resulting module</param>
     /// <returns>Error code</returns>
-    DWORD InjectDefault(
+    blackbone::call_result_t<blackbone::ModuleDataPtr> InjectDefault(
         InjectContext& context,
         const blackbone::pe::PEImage& img,
-        blackbone::Thread* pThread,
-        const blackbone::ModuleData* &mod
+        blackbone::ThreadPtr pThread = nullptr
         );
 
     /// <summary>
@@ -116,7 +115,7 @@ private:
     /// <param name="img">Target image</param>
     /// <param name="initRVA">Init function RVA</param>
     /// <returns>Error code</returns>
-    DWORD InjectionCore::InjectKernel(
+    NTSTATUS InjectionCore::InjectKernel(
         InjectContext& context,
         const blackbone::pe::PEImage& img,
         uint32_t initRVA /*= 0*/
@@ -127,7 +126,7 @@ private:
     /// </summary>
     /// <param name="context">Injection context</param>
     /// <returns>Error code</returns>
-    DWORD MapDriver( InjectContext& context, const blackbone::pe::PEImage& img );
+    NTSTATUS MapDriver( InjectContext& context, const blackbone::pe::PEImage& img );
 
     /// <summary>
     /// Call initialization routine
@@ -136,12 +135,12 @@ private:
     /// <param name="mod">Target module</param>
     /// <param name="pThread">Context thread of execution</param>
     /// <returns>Error code</returns>
-    DWORD CallInitRoutine(
+    NTSTATUS CallInitRoutine(
         InjectContext& context,
         const blackbone::pe::PEImage& img,
-        const blackbone::ModuleData* mod,
+        blackbone::ModuleDataPtr mod,
         uint64_t exportRVA,
-        blackbone::Thread* pThread
+        blackbone::ThreadPtr pThread = nullptr
         );
 
 private:
