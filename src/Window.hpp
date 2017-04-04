@@ -1,7 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
-#include "../../BlackBone/src/BlackBone/Misc/Thunk.hpp"
+#include <BlackBone/src/BlackBone/Misc/Thunk.hpp>
 #include <string>
 #include <map>
 

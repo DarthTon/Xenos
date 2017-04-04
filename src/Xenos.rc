@@ -246,13 +246,13 @@ END
 // DRIVER
 //
 
-IDR_DRV7                DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
+IDR_DRV7                DRIVER                  "..\\ext\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win7Release\\BlackBoneDrv7.sys"
 
-IDR_DRV8                DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
+IDR_DRV8                DRIVER                  "..\\ext\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8Release\\BlackBoneDrv8.sys"
 
-IDR_DRV81               DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
+IDR_DRV81               DRIVER                  "..\\ext\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win8.1Release\\BlackBoneDrv81.sys"
 
-IDR_DRV10               DRIVER                  "..\\..\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
+IDR_DRV10               DRIVER                  "..\\ext\\BlackBone\\src\\BlackBoneDrv\\bin\\x64\\Win10Release\\BlackBoneDrv10.sys"
 
 #endif    // Neutral (Default) resources
 /////////////////////////////////////////////////////////////////////////////

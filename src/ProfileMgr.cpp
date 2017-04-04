@@ -1,5 +1,5 @@
 #include "ProfileMgr.h"
-#include "../../BlackBone/src/BlackBone/Misc/Utils.h"
+#include <BlackBone/src/BlackBone/Misc/Utils.h>
 
 #define CURRENT_PROFILE L"\\XenosCurrentProfile.xpr"
 
