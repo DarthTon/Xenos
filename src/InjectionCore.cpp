@@ -436,6 +436,10 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     DWORD errCode = ERROR_SUCCESS;
     PROCESS_INFORMATION pi = { 0 };
 
+    // Update PID
+    if(pContext->cfg.injectMode == Existing && pContext->pid == 0)
+        pContext->pid = pContext->cfg.pid;
+
     // Log some info
     xlog::Critical(
         "Injection initiated. Mode: %d, process type: %d, pid: %d, mmap flags: 0x%X, "

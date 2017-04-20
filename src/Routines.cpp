@@ -28,6 +28,8 @@ DWORD MainDlg::LoadConfig( const std::wstring& path /*= L""*/ )
 
                 if (!pidList.empty())
                 {
+                    cfg.pid = pidList.front();
+
                     auto idx = _procList.Add( cfg.procName + L" (" + std::to_wstring( pidList.front() ) + L")", pidList.front() );
                     _procList.selection( idx );
 
