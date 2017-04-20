@@ -235,16 +235,6 @@
     <ResourceCompile Include="Xenos.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\BlackBone\src\BlackBone\BlackBone.vcxproj">
-      <Project>{a2c53563-46f5-4d87-903f-3f1f2fdb2deb}</Project>
-      <Private>false</Private>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
-      <LinkLibraryDependencies>true</LinkLibraryDependencies>
-      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="alien.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -252,6 +242,11 @@
     <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys" />
     <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys" />
     <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ext\BlackBone\src\BlackBone\BlackBone.vcxproj">
+      <Project>{a2c53563-46f5-4d87-903f-3f1f2fdb2deb}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
