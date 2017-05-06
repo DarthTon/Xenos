@@ -136,6 +136,7 @@ private:
     std::wstring    _processPath;   // Target process path
     vecPEImages     _images;        // Loaded module exports
     vecImageExports _exports;       // Exports list
+    std::mutex      _lock;          // Injection lock
 
     //
     // Interface controls

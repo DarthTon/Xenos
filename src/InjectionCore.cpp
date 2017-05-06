@@ -127,20 +127,31 @@ NTSTATUS InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORM
                     DEFAULT_ACCESS_P | PROCESS_QUERY_LIMITED_INFORMATION
                     );
             }
-
-            if (!NT_SUCCESS( status ))
-                xlog::Error( "Failed to escalate process handle access, status 0x%X", status );
         }
         else
         {
-            status = _process.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS );
-            if (!NT_SUCCESS( status ))
-                xlog::Error( "Failed to attach to process, status 0x%X", status );
+            // Attach for thread init
+            status = _process.Attach(
+                pi.dwProcessId,
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD | PROCESS_VM_READ
+            );
         }
 
         // Create new thread to make sure LdrInitializeProcess gets called
         if (NT_SUCCESS( status ))
+        {
             _process.EnsureInit();
+
+            // Reattach with full rights
+            if (!context.cfg.krnHandle)
+                status = _process.Attach( pi.dwProcessId );
+        }
+
+        if (!NT_SUCCESS( status ))
+        {
+            xlog::Error( "Failed to attach to process, status 0x%X", status );
+            return status;
+        }
 
         // No process handle is required for kernel injection
         if (context.cfg.injectMode >= Kernel_Thread)
@@ -268,18 +279,18 @@ NTSTATUS InjectionCore::ValidateContext( InjectContext& context, const blackbone
     if (!img.pureIL() && img.mType() == blackbone::mt_mod32 && barrier.targetWow64 == false)
     {
         Message::ShowError( _hMainDlg, L"Can't inject 32 bit image '" + img.name() + L"' into native 64 bit process" );
-        return STATUS_INVALID_IMAGE_HASH;
+        return STATUS_INVALID_IMAGE_WIN_32;
     }
 
-    // Additional validation for kernel manual map
-    if (context.cfg.injectMode == Kernel_MMap && !img.pureIL() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
+    // Trying to inject x64 dll into WOW64 process
+    if (!img.pureIL() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
     {
         Message::ShowError( _hMainDlg, L"Can't inject 64 bit image '" + img.name() + L"' into WOW64 process" );
         return STATUS_INVALID_IMAGE_WIN_64;
     }
 
     // Can't inject managed dll through WOW64 barrier
-    if (img.pureIL() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
+    /*if (img.pureIL() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
     {
         if (barrier.type == blackbone::wow_32_64)
             Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject managed dll '" + img.name() + L"' into x64 process" );
@@ -287,21 +298,21 @@ NTSTATUS InjectionCore::ValidateContext( InjectContext& context, const blackbone
             Message::ShowWarning( _hMainDlg, L"Please use Xenos.exe to inject managed dll '" + img.name() + L"' into WOW64 process" );
 
         return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
-    }
+    }*/
 
     // Can't inject 64 bit image into WOW64 process from x86 version
-    if (img.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_32_32)
+    /*if (img.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_32_32)
     {
         Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject 64 bit image '" + img.name() + L"' into WOW64 process" );
         return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
-    }
+    }*/
 
     // Can't execute code in another thread trough WOW64 barrier
-    if (context.cfg.hijack && barrier.type != blackbone::wow_32_32 &&  barrier.type != blackbone::wow_64_64)
+    /*if (context.cfg.hijack && barrier.type != blackbone::wow_32_32 &&  barrier.type != blackbone::wow_64_64)
     {
         Message::ShowError( _hMainDlg, L"Can't execute code in existing thread trough WOW64 barrier" );
         return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
-    }
+    }*/
 
     // Manual map restrictions
     if (context.cfg.injectMode == Manual || context.cfg.injectMode == Kernel_MMap)
@@ -312,7 +323,7 @@ NTSTATUS InjectionCore::ValidateContext( InjectContext& context, const blackbone
             return STATUS_INVALID_IMAGE_FORMAT;
         }
 
-        if (((img.mType() == blackbone::mt_mod32 && barrier.sourceWow64 == false) ||
+        /*if (((img.mType() == blackbone::mt_mod32 && barrier.sourceWow64 == false) ||
             (img.mType() == blackbone::mt_mod64 && barrier.sourceWow64 == true)))
         {
             if (img.mType() == blackbone::mt_mod32)
@@ -321,22 +332,7 @@ NTSTATUS InjectionCore::ValidateContext( InjectContext& context, const blackbone
                 Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to manually map 64 bit image '" + img.name() + L"'" );
 
             return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
-        }
-    }
-
-    // Trying to inject x64 dll into WOW64 process
-    if (img.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_64_32)
-    {
-        int btn = MessageBoxW(
-            _hMainDlg,
-            (L"Are you sure you want to inject 64 bit dll '" + img.name() + L"' into WOW64 process?").c_str(),
-            L"Warning",
-            MB_ICONWARNING | MB_YESNO
-            );
-
-        // Canceled by user
-        if (btn != IDYES)
-            return STATUS_REQUEST_ABORTED;
+        }*/
     }
 
     return STATUS_SUCCESS;
@@ -546,6 +542,17 @@ NTSTATUS InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEI
         }
     }
 
+    auto modCallback = []( blackbone::CallbackType type, void*, blackbone::Process&, const blackbone::ModuleData& modInfo )
+    {
+        if (type == blackbone::PreCallback)
+        {
+            if (modInfo.name == L"user32.dll")
+                return blackbone::LoadData( blackbone::MT_Native, blackbone::Ldr_Ignore );
+        }
+
+        return blackbone::LoadData( blackbone::MT_Default, blackbone::Ldr_Ignore );
+    };
+
     // Actual injection
     if (NT_SUCCESS( status ))
     {
@@ -563,7 +570,11 @@ NTSTATUS InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEI
 
             case Manual:
                 {
-                    auto injectedMod = _process.mmap().MapImage( img.path(), blackbone::RebaseProcess | blackbone::NoDelayLoad | static_cast<blackbone::eLoadFlags>(context.cfg.mmapFlags) );
+                    auto flags = static_cast<blackbone::eLoadFlags>(context.cfg.mmapFlags);
+                    if (img.isExe())
+                        flags |= blackbone::RebaseProcess;
+
+                    auto injectedMod = _process.mmap().MapImage( img.path(), flags, modCallback );
                     if (!injectedMod)
                     {
                         status = injectedMod.status;

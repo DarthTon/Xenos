@@ -141,6 +141,8 @@ DWORD MainDlg::SetActiveProcess( DWORD pid, const std::wstring& path )
 /// </summary>
 void MainDlg::Inject()
 {
+    _inject.disable();
+
     InjectContext context;
     auto& cfg = _profileMgr.config();
     NTSTATUS status = STATUS_SUCCESS;
@@ -169,13 +171,14 @@ void MainDlg::Inject()
     }
 
     // Close after successful injection
-    if (cfg.close && status == ERROR_SUCCESS)
+    if (cfg.close && NT_SUCCESS( status ))
     {
         SaveConfig();
         CloseDialog();
         return;
     }
 
+    _inject.enable();
     _status.SetText( 2, L"Idle" );
 }
 

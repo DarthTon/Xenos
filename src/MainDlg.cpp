@@ -131,6 +131,7 @@ INT_PTR MainDlg::OnSelChange( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 INT_PTR MainDlg::OnLoadImage( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     std::wstring path;
+    EnableWindow( GetDlgItem( hDlg, IDC_ADD_MOD ), FALSE );
     bool res = OpenSaveDialog(
         L"All (*.*)\0*.*\0Dynamic link library (*.dll)\0*.dll\0System driver (*.sys)\0*.sys\0",
         (_profileMgr.config().injectMode == Kernel_DriverMap) ? 3 : 2,
@@ -141,6 +142,7 @@ INT_PTR MainDlg::OnLoadImage( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
     if (res && LoadImageFile( path ) == ERROR_SUCCESS)
         _profileMgr.config().initRoutine = L"";
 
+    EnableWindow( GetDlgItem( hDlg, IDC_ADD_MOD ), TRUE );
     return TRUE;
 }
 
@@ -174,6 +176,7 @@ INT_PTR MainDlg::OnClearImages( HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 
 INT_PTR MainDlg::OnExecute( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
+    std::lock_guard<std::mutex> lg( _lock );
     std::thread( &MainDlg::Inject, this ).detach();
     return TRUE;
 }
@@ -215,13 +218,16 @@ INT_PTR MainDlg::OnExistingProcess( HWND hDlg, UINT message, WPARAM wParam, LPAR
 INT_PTR MainDlg::OnSelectExecutable( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
     std::wstring path;
+
+    EnableWindow( GetDlgItem( hDlg, IDC_SELECT_PROC ), FALSE );
     if (OpenSaveDialog( L"All (*.*)\0*.*\0Executable image (*.exe)\0*.exe\0", 2, path ))
         SetActiveProcess( 0, path );
     else
         _procList.reset();
 
     _profileMgr.config().processMode = _newProc.checked() ? NewProcess : ManualLaunch;
-    UpdateInterface( );
+    UpdateInterface();
+    EnableWindow( GetDlgItem( hDlg, IDC_SELECT_PROC ), TRUE );
     return TRUE;
 }
 
