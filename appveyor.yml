@@ -16,6 +16,9 @@ configuration:
   - Debug
   - Release
   
+install:
+  - cmd: git submodule update --init --recursive
+ 
 build:
   parallel: true
-  project: Xenos.sln 
+  project: Xenos.sln
