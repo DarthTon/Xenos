@@ -131,21 +131,12 @@ NTSTATUS InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORM
         else
         {
             // Attach for thread init
-            status = _process.Attach(
-                pi.dwProcessId,
-                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD | PROCESS_VM_READ
-            );
+            status = _process.Attach( pi.dwProcessId );
         }
 
         // Create new thread to make sure LdrInitializeProcess gets called
         if (NT_SUCCESS( status ))
-        {
             _process.EnsureInit();
-
-            // Reattach with full rights
-            if (!context.cfg.krnHandle)
-                status = _process.Attach( pi.dwProcessId );
-        }
 
         if (!NT_SUCCESS( status ))
         {
@@ -677,6 +668,9 @@ blackbone::call_result_t<blackbone::ModuleDataPtr> InjectionCore::InjectDefault(
                 code = STATUS_UNSUCCESSFUL;
 
             xlog::Error( "Failed to inject pure IL image, status: %d", code );
+            if (NT_SUCCESS( code ))
+                code = STATUS_UNSUCCESSFUL;
+
             return code;
         }
 
@@ -684,30 +678,9 @@ blackbone::call_result_t<blackbone::ModuleDataPtr> InjectionCore::InjectDefault(
         return mod ? blackbone::call_result_t<blackbone::ModuleDataPtr>( mod ) 
                    : blackbone::call_result_t<blackbone::ModuleDataPtr>( STATUS_NOT_FOUND );
     }
-    // Inject through existing thread
-    else if (pThread != nullptr)
-    {
-        // Load 
-        auto pLoadLib = _process.modules().GetExport( _process.modules().GetModule( L"kernel32.dll" ), "LoadLibraryW" );
-        if (!pLoadLib)
-            return pLoadLib.status;
-
-        blackbone::RemoteFunction<decltype(&LoadLibraryW)> pfn( _process, pLoadLib->procAddress );
-        
-        auto injectedMod = pfn.Call( img.path().c_str(), pThread );
-        if (!injectedMod)
-        {
-            xlog::Error( "Failed to inject image using thread hijack, status 0x%X", injectedMod.status );
-            return injectedMod.status;
-        }
-
-        auto mod = _process.modules().GetModule( img.path() );
-        return mod ? blackbone::call_result_t<blackbone::ModuleDataPtr>( mod ) 
-                   : blackbone::call_result_t<blackbone::ModuleDataPtr>( STATUS_NOT_FOUND );
-    }
     else
     {
-        auto injectedMod = _process.modules().Inject( img.path() );
+        auto injectedMod = _process.modules().Inject( img.path(), pThread );
         if (!injectedMod)
             xlog::Error( "Failed to inject image using default injection, status: 0x%X", injectedMod.status );
 
@@ -734,7 +707,7 @@ NTSTATUS InjectionCore::InjectKernel(
             img.path(),
             (KMmapFlags)context.cfg.mmapFlags,
             initRVA,
-            context.cfg.initRoutine
+            context.cfg.initArgs
             );
     }
     else
@@ -744,7 +717,7 @@ NTSTATUS InjectionCore::InjectKernel(
             img.path(),
             (context.cfg.injectMode == Kernel_Thread ? IT_Thread : IT_Apc),
             initRVA,
-            context.cfg.initRoutine,
+            context.cfg.initArgs,
             context.cfg.unlink,
             context.cfg.erasePE
             );
@@ -791,14 +764,17 @@ NTSTATUS InjectionCore::CallInitRoutine(
                 return argMem.status;
 
             argMem->Write( 0, context.cfg.initArgs.length() * sizeof( wchar_t ) + 2, context.cfg.initArgs.c_str() );
+            auto status = _process.remote().ExecDirect( fnPtr, argMem->ptr() );
 
-            xlog::Normal( "Initialization routine returned 0x%X", _process.remote().ExecDirect( fnPtr, argMem->ptr() ) );
+            xlog::Normal( "Initialization routine returned 0x%X", status );
         }
         // Execute in existing thread
         else
         {
             blackbone::RemoteFunction<fnInitRoutine> pfn( _process, fnPtr );
-            xlog::Normal( "Initialization routine returned 0x%X", pfn.Call( context.cfg.initArgs.c_str(), pThread ) );
+            auto status = pfn.Call( context.cfg.initArgs.c_str(), pThread );
+
+            xlog::Normal( "Initialization routine returned 0x%X", status );
         }
     }
 

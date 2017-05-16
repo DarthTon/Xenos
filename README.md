@@ -1,7 +1,7 @@
 Xenos
 =====
 
-Windows dll injector. This project completely depends on Blackbone library - https://github.com/DarthTon/Blackbone
+Windows dll injector. Based on Blackbone library - https://github.com/DarthTon/Blackbone
 
 ## Features ##
 
@@ -32,3 +32,5 @@ Supported OS: Win7 - Win10 x64
 
 ## License ##
 Xenos is licensed under the MIT License. Dependencies are under their respective licenses.
+
+[![Build status](https://ci.appveyor.com/api/projects/status/eu6lpbla89gjgy5m?svg=true)](https://ci.appveyor.com/project/DarthTon/xenos)
