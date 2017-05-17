@@ -37,9 +37,9 @@ INT_PTR DlgWait::OnCloseBtn( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPar
 /// Wait for injection
 /// </summary>
 /// <returns>Error code</returns>
-DWORD DlgWait::WaitForInjection()
+NTSTATUS DlgWait::WaitForInjection()
 {
-    for (bool inject = true; inject && _status != ERROR_CANCELLED; inject = _context.cfg.injIndef)
+    for (bool inject = true; inject && _status != STATUS_REQUEST_ABORTED; inject = _context.cfg.injIndef)
         _status = _core.InjectMultiple( &_context );
 
     CloseDialog();

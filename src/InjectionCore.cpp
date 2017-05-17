@@ -16,8 +16,7 @@ InjectionCore::~InjectionCore()
     // If at least one process with allocated physical pages exist, prevent driver unload or process will crash
     // Although PID can be reused, I'm too lazy to implement more reliable detection
     //
-    std::vector<DWORD> existing, mutual;
-    blackbone::Process::EnumByName( L"", existing );
+    std::vector<DWORD> existing = blackbone::Process::EnumByName( L"" ), mutual;
     std::sort( existing.begin(), existing.end() );
     std::sort( _criticalProcList.begin(), _criticalProcList.end() );
     std::set_intersection( existing.begin(), existing.end(), _criticalProcList.begin(), _criticalProcList.end(), std::back_inserter( mutual ) );
@@ -32,7 +31,7 @@ InjectionCore::~InjectionCore()
 /// <param name="context">Injection context.</param>
 /// <param name="pi">Process info in case of new process</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi )
+NTSTATUS InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATION& pi )
 {
     NTSTATUS status = ERROR_SUCCESS;
 
@@ -55,8 +54,8 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
         // Filter already existing processes
         std::vector<blackbone::ProcessInfo> newList;
 
-        if(context.procList.empty())
-            blackbone::Process::EnumByNameOrPID( 0, procName, context.procList );
+        if (context.procList.empty())
+            context.procList = blackbone::Process::EnumByNameOrPID( 0, procName ).result( std::vector<blackbone::ProcessInfo>() );
 
         // Wait for process
         for (context.waitActive = true;; Sleep( 10 ))
@@ -65,7 +64,7 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
             if (!context.waitActive)
             {
                 xlog::Warning( "Process wait canceled by user" );
-                return ERROR_CANCELLED;
+                return STATUS_REQUEST_ABORTED;
             }
 
             if (!context.procDiff.empty())
@@ -90,7 +89,7 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
             else
             {  
                 // Detect new process
-                blackbone::Process::EnumByNameOrPID( 0, procName, newList );
+                newList = blackbone::Process::EnumByNameOrPID( 0, procName ).result( std::vector<blackbone::ProcessInfo>() );
                 std::set_difference( 
                     newList.begin(), newList.end(), 
                     context.procList.begin(), context.procList.end(), 
@@ -128,20 +127,22 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
                     DEFAULT_ACCESS_P | PROCESS_QUERY_LIMITED_INFORMATION
                     );
             }
-
-            if (!NT_SUCCESS( status ))
-                xlog::Error( "Failed to escalate process handle access, status 0x%X", status );
         }
         else
         {
-            status = _process.Attach( pi.dwProcessId, PROCESS_ALL_ACCESS );
-            if (!NT_SUCCESS( status ))
-                xlog::Error( "Failed to attach to process, status 0x%X", status );
+            // Attach for thread init
+            status = _process.Attach( pi.dwProcessId );
         }
 
         // Create new thread to make sure LdrInitializeProcess gets called
         if (NT_SUCCESS( status ))
             _process.EnsureInit();
+
+        if (!NT_SUCCESS( status ))
+        {
+            xlog::Error( "Failed to attach to process, status 0x%X", status );
+            return status;
+        }
 
         // No process handle is required for kernel injection
         if (context.cfg.injectMode >= Kernel_Thread)
@@ -227,13 +228,13 @@ DWORD InjectionCore::GetTargetProcess( InjectContext& context, PROCESS_INFORMATI
 /// </summary>
 /// <param name="context">Injection context</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::pe::PEImage& img )
+NTSTATUS InjectionCore::ValidateContext( InjectContext& context, const blackbone::pe::PEImage& img )
 {
     // Invalid path
     if (context.images.empty())
     {
         Message::ShowError( _hMainDlg, L"Please add at least one image to inject" );
-        return ERROR_INVALID_PARAMETER;
+        return STATUS_INVALID_PARAMETER_1;
     }
 
     // Validate driver
@@ -243,66 +244,66 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
         if (img.mType() != blackbone::mt_mod64)
         {
             Message::ShowError( _hMainDlg, L"Can't map x86 drivers - '" + img.name() + L"'" );
-            return ERROR_INVALID_IMAGE_HASH;
+            return STATUS_INVALID_IMAGE_WIN_32;
         }
 
         // Image must be native
         if (img.subsystem() != IMAGE_SUBSYSTEM_NATIVE)
         {
             Message::ShowError( _hMainDlg, L"Can't map image with non-native subsystem - '" + img.name() + L"'" );
-            return ERROR_INVALID_IMAGE_HASH;
+            return STATUS_INVALID_IMAGE_HASH;
         }
 
-        return ERROR_SUCCESS;
+        return STATUS_SUCCESS;
     }
 
     // No process selected
     if (!_process.valid())
     {
         Message::ShowError( _hMainDlg, L"Please select valid process before injection" );
-        return ERROR_INVALID_HANDLE;
+        return STATUS_INVALID_HANDLE;
     }
 
-    auto& barrier = _process.core().native()->GetWow64Barrier();
+    auto& barrier = _process.barrier();
 
     // Validate architecture
     if (!img.pureIL() && img.mType() == blackbone::mt_mod32 && barrier.targetWow64 == false)
     {
         Message::ShowError( _hMainDlg, L"Can't inject 32 bit image '" + img.name() + L"' into native 64 bit process" );
-        return ERROR_INVALID_IMAGE_HASH;
+        return STATUS_INVALID_IMAGE_WIN_32;
     }
 
-    // Additional validation for kernel manual map
-    if (context.cfg.injectMode == Kernel_MMap && !img.pureIL() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
+    // Trying to inject x64 dll into WOW64 process
+    if (!img.pureIL() && img.mType() == blackbone::mt_mod64 && barrier.targetWow64 == true)
     {
         Message::ShowError( _hMainDlg, L"Can't inject 64 bit image '" + img.name() + L"' into WOW64 process" );
-        return ERROR_INVALID_PARAMETER;
+        return STATUS_INVALID_IMAGE_WIN_64;
     }
 
     // Can't inject managed dll through WOW64 barrier
-    if (img.pureIL() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
+    /*if (img.pureIL() && (barrier.type == blackbone::wow_32_64 || barrier.type == blackbone::wow_64_32))
     {
         if (barrier.type == blackbone::wow_32_64)
             Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject managed dll '" + img.name() + L"' into x64 process" );
         else
             Message::ShowWarning( _hMainDlg, L"Please use Xenos.exe to inject managed dll '" + img.name() + L"' into WOW64 process" );
 
-        return ERROR_INVALID_PARAMETER;
-    }
+        return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
+    }*/
 
     // Can't inject 64 bit image into WOW64 process from x86 version
-    if (img.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_32_32)
+    /*if (img.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_32_32)
     {
         Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to inject 64 bit image '" + img.name() + L"' into WOW64 process" );
-        return ERROR_INVALID_PARAMETER;
-    }
+        return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
+    }*/
 
     // Can't execute code in another thread trough WOW64 barrier
-    if (context.cfg.hijack && barrier.type != blackbone::wow_32_32 &&  barrier.type != blackbone::wow_64_64)
+    /*if (context.cfg.hijack && barrier.type != blackbone::wow_32_32 &&  barrier.type != blackbone::wow_64_64)
     {
         Message::ShowError( _hMainDlg, L"Can't execute code in existing thread trough WOW64 barrier" );
-        return ERROR_INVALID_PARAMETER;
-    }
+        return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
+    }*/
 
     // Manual map restrictions
     if (context.cfg.injectMode == Manual || context.cfg.injectMode == Kernel_MMap)
@@ -310,10 +311,10 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
         if (img.pureIL() && (context.cfg.injectMode == Kernel_MMap || !img.isExe()))
         {
             Message::ShowError( _hMainDlg, L"Pure managed class library '" + img.name() + L"' can't be manually mapped yet" );
-            return ERROR_INVALID_PARAMETER;
+            return STATUS_INVALID_IMAGE_FORMAT;
         }
 
-        if (((img.mType() == blackbone::mt_mod32 && barrier.sourceWow64 == false) ||
+        /*if (((img.mType() == blackbone::mt_mod32 && barrier.sourceWow64 == false) ||
             (img.mType() == blackbone::mt_mod64 && barrier.sourceWow64 == true)))
         {
             if (img.mType() == blackbone::mt_mod32)
@@ -321,26 +322,11 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
             else
                 Message::ShowWarning( _hMainDlg, L"Please use Xenos64.exe to manually map 64 bit image '" + img.name() + L"'" );
 
-            return ERROR_INVALID_PARAMETER;
-        }
+            return STATUS_IMAGE_MACHINE_TYPE_MISMATCH;
+        }*/
     }
 
-    // Trying to inject x64 dll into WOW64 process
-    if (img.mType() == blackbone::mt_mod64 && barrier.type == blackbone::wow_64_32)
-    {
-        int btn = MessageBoxW(
-            _hMainDlg,
-            (L"Are you sure you want to inject 64 bit dll '" + img.name() + L"' into WOW64 process?").c_str(),
-            L"Warning",
-            MB_ICONWARNING | MB_YESNO
-            );
-
-        // Canceled by user
-        if (btn != IDYES)
-            return ERROR_CANCELLED;
-    }
-
-    return ERROR_SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 /// <summary>
@@ -349,7 +335,7 @@ DWORD InjectionCore::ValidateContext( InjectContext& context, const blackbone::p
 /// <param name="init">Routine name</param>
 /// <param name="initRVA">Routine RVA, if found</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, blackbone::pe::PEImage& img )
+NTSTATUS InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, blackbone::pe::PEImage& img )
 {
     // Validate init routine
     if (img.pureIL())
@@ -358,7 +344,7 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
         if (img.isExe())
         {
             initRVA = 0;
-            return ERROR_SUCCESS;
+            return STATUS_SUCCESS;
         };
 
         blackbone::ImageNET::mapMethodRVA methods;
@@ -380,7 +366,9 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
         if (!found)
         {
             if (init.empty())
+            {
                 Message::ShowError( _hMainDlg, L"Please select '" + img.name() + L"' entry point" );
+            }
             else
             {
                 auto str = blackbone::Utils::FormatString(
@@ -392,7 +380,7 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
                 Message::ShowError( _hMainDlg, str );
             }
 
-            return ERROR_NOT_FOUND;
+            return STATUS_NOT_FOUND;
         }
     }
     else if (!init.empty())
@@ -414,7 +402,7 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
                 );
 
             Message::ShowError( _hMainDlg, str );
-            return ERROR_NOT_FOUND;
+            return STATUS_NOT_FOUND;
         }
         else
         {
@@ -422,7 +410,7 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
         }
     }
 
-    return ERROR_SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 
@@ -431,9 +419,9 @@ DWORD InjectionCore::ValidateInit( const std::string& init, uint32_t& initRVA, b
 /// </summary>
 /// <param name="pCtx">Injection context</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
+NTSTATUS InjectionCore::InjectMultiple( InjectContext* pContext )
 {
-    DWORD errCode = ERROR_SUCCESS;
+    NTSTATUS status = ERROR_SUCCESS;
     PROCESS_INFORMATION pi = { 0 };
 
     // Update PID
@@ -456,9 +444,9 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
         );
 
     // Get process for injection
-    errCode = GetTargetProcess( *pContext, pi );
-    if (errCode != ERROR_SUCCESS)
-        return errCode;
+    status = GetTargetProcess( *pContext, pi );
+    if (status != STATUS_SUCCESS)
+        return status;
 
     if (pContext->cfg.delay)
         Sleep( pContext->cfg.delay );
@@ -466,7 +454,7 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     // Inject all images
     for (auto& img : pContext->images)
     {
-        errCode |= InjectSingle( *pContext, *img );
+        status |= InjectSingle( *pContext, *img );
         if (pContext->cfg.period)
             Sleep( pContext->cfg.period );
     }
@@ -476,7 +464,7 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     //
     if (pi.hThread)
     {
-        if (errCode == ERROR_SUCCESS)
+        if (status == STATUS_SUCCESS)
             ResumeThread( pi.hThread );
 
         CloseHandle( pi.hThread );
@@ -492,7 +480,7 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     }
 
     // Save PID if using physical memory allocation
-    if (errCode == ERROR_SUCCESS && (pContext->cfg.mmapFlags & blackbone::HideVAD) &&
+    if (status == STATUS_SUCCESS && (pContext->cfg.mmapFlags & blackbone::HideVAD) &&
          (pContext->cfg.injectMode == Manual || pContext->cfg.injectMode == Kernel_MMap))
     {
         _criticalProcList.emplace_back( _process.pid() );
@@ -501,7 +489,7 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
     if (_process.core().handle())
         _process.Detach();
 
-    return errCode;
+    return status;
 }
 
 
@@ -510,31 +498,30 @@ DWORD InjectionCore::InjectMultiple( InjectContext* pContext )
 /// </summary>
 /// <param name="context">Injection context</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImage& img )
+NTSTATUS InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImage& img )
 {
-    DWORD errCode = ERROR_SUCCESS;
-    blackbone::Thread *pThread = nullptr;
-    const blackbone::ModuleData* mod = nullptr;
+    NTSTATUS status = ERROR_SUCCESS;
+    blackbone::ThreadPtr pThread;
+    blackbone::ModuleDataPtr mod;
     uint32_t exportRVA = 0;
 
     xlog::Critical( "Injecting image '%ls'", img.path().c_str() );
 
     // Check export
-    errCode = ValidateInit( blackbone::Utils::WstringToUTF8( context.cfg.initRoutine ), exportRVA, img );
-    if (errCode != ERROR_SUCCESS)
+    status = ValidateInit( blackbone::Utils::WstringToUTF8( context.cfg.initRoutine ), exportRVA, img );
+    if (!NT_SUCCESS( status ))
     {
-        xlog::Error( "Image init routine check failed, status: 0x%X", errCode );
-        return errCode;
+        xlog::Error( "Image init routine check failed, status: 0x%X", status );
+        return status;
     }
 
     // Final sanity check
     if (context.cfg.injectMode < Kernel_Thread || context.cfg.injectMode == Kernel_DriverMap)
     {
-        errCode = ValidateContext( context, img );
-        if (errCode != ERROR_SUCCESS)
+        if (!NT_SUCCESS( status = ValidateContext( context, img ) ))
         {
-            xlog::Error( "Context validation failed, status: 0x%X", errCode );
-            return errCode;
+            xlog::Error( "Context validation failed, status: 0x%X", status );
+            return status;
         }
     }
 
@@ -543,39 +530,65 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
     {
         xlog::Normal( "Searching for thread to hijack" );
         pThread = _process.threads().getMostExecuted();
-        if (pThread == nullptr)
+        if (!pThread)
         {
             Message::ShowError( _hMainDlg, L"Failed to get suitable thread for execution");
-            return errCode = ERROR_NOT_FOUND;
+            return status = STATUS_NOT_FOUND;
         }
     }
 
+    auto modCallback = []( blackbone::CallbackType type, void*, blackbone::Process&, const blackbone::ModuleData& modInfo )
+    {
+        if (type == blackbone::PreCallback)
+        {
+            if (modInfo.name == L"user32.dll")
+                return blackbone::LoadData( blackbone::MT_Native, blackbone::Ldr_Ignore );
+        }
+
+        return blackbone::LoadData( blackbone::MT_Default, blackbone::Ldr_Ignore );
+    };
+
     // Actual injection
-    if (errCode == ERROR_SUCCESS)
+    if (NT_SUCCESS( status ))
     {
         switch (context.cfg.injectMode)
         {
             case Normal:
-                errCode = InjectDefault( context, img, pThread, mod );
+                {
+                    auto injectedMod = InjectDefault( context, img, pThread );
+                    if (!injectedMod)
+                        status = injectedMod.status;
+                    else
+                        mod = injectedMod.result();
+                }
                 break;
 
             case Manual:
-                mod = _process.mmap().MapImage( img.path(), blackbone::RebaseProcess | blackbone::NoDelayLoad | static_cast<blackbone::eLoadFlags>(context.cfg.mmapFlags) );
-                errCode = LastNtStatus();
-                if (!mod)
-                    xlog::Error( "Failed to inject image using manual map, status: 0x%X", errCode );
+                {
+                    auto flags = static_cast<blackbone::eLoadFlags>(context.cfg.mmapFlags);
+                    if (img.isExe())
+                        flags |= blackbone::RebaseProcess;
+
+                    auto injectedMod = _process.mmap().MapImage( img.path(), flags, modCallback );
+                    if (!injectedMod)
+                    {
+                        status = injectedMod.status;
+                        xlog::Error( "Failed to inject image using manual map, status: 0x%X", injectedMod.status );
+                    }
+                    else
+                        mod = injectedMod.result();
+                }
                 break;
 
             case Kernel_Thread:
             case Kernel_APC:
             case Kernel_MMap:
-                errCode = InjectKernel( context, img,  exportRVA );
-                if (!NT_SUCCESS( errCode ))
-                    xlog::Error( "Failed to inject image using kernel injection, status: 0x%X", errCode );
+                if (!NT_SUCCESS( status = InjectKernel( context, img, exportRVA ) ))
+                    xlog::Error( "Failed to inject image using kernel injection, status: 0x%X", status );
                 break;                
 
             case Kernel_DriverMap:
-                errCode = MapDriver( context, img );
+                status = MapDriver( context, img );
                 break;
 
             default:
@@ -584,43 +597,45 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
     }
 
     // Fix error code
-    if (!img.pureIL() && mod == nullptr && context.cfg.injectMode < Kernel_Thread && errCode == ERROR_SUCCESS)
-        errCode = STATUS_UNSUCCESSFUL;
+    if (!img.pureIL() && mod == nullptr && context.cfg.injectMode < Kernel_Thread && NT_SUCCESS( status ))
+    {
+        xlog::Error( "Invalid failure status: 0x%X", status );
+        status = STATUS_UNSUCCESSFUL;
+    }
 
     // Initialize routine
-    if (errCode == ERROR_SUCCESS && context.cfg.injectMode < Kernel_Thread)
+    if (NT_SUCCESS( status ) && context.cfg.injectMode < Kernel_Thread)
     {
-        errCode = CallInitRoutine( context, img, mod, exportRVA, pThread );
+        status = CallInitRoutine( context, img, mod, exportRVA, pThread );
     }
-    else if (errCode != ERROR_SUCCESS)
+    else if (!NT_SUCCESS( status ))
     {
         wchar_t errBuf[128] = { 0 };
-        wsprintfW( errBuf, L"Failed to inject image '%ls'.\nError code 0x%X", img.path().c_str(), errCode );
+        wsprintfW( errBuf, L"Failed to inject image '%ls'.\nError code 0x%X", img.path().c_str(), status );
         Message::ShowError( _hMainDlg, errBuf );
     }
 
     // Erase header
-    if (errCode == ERROR_SUCCESS && mod && context.cfg.injectMode == Normal && context.cfg.erasePE)
+    if (NT_SUCCESS( status ) && mod && context.cfg.injectMode == Normal && context.cfg.erasePE)
     {
-        auto base = mod->baseAddress;
         auto size = img.headersSize();
         DWORD oldProt = 0;
-        std::unique_ptr<uint8_t> zeroBuf( new uint8_t[size]() );
+        std::unique_ptr<uint8_t[]> zeroBuf( new uint8_t[size]() );
 
         _process.memory().Protect( mod->baseAddress, size, PAGE_EXECUTE_READWRITE, &oldProt );
-        _process.memory().Write( base, size, zeroBuf.get() );
+        _process.memory().Write( mod->baseAddress, size, zeroBuf.get() );
         _process.memory().Protect( mod->baseAddress, size, oldProt );
     }
 
     // Unlink module if required
-    if (errCode == ERROR_SUCCESS && mod && context.cfg.injectMode == Normal && context.cfg.unlink)
+    if (NT_SUCCESS( status ) && mod && context.cfg.injectMode == Normal && context.cfg.unlink)
         if (_process.modules().Unlink( mod ) == false)
         {
-            errCode = ERROR_FUNCTION_FAILED;
+            status = ERROR_FUNCTION_FAILED;
             Message::ShowError( _hMainDlg, L"Failed to unlink module '" + img.path() + L"'" );
         }
     
-    return errCode;
+    return status;
 }
 
 
@@ -631,11 +646,10 @@ DWORD InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEImag
 /// <param name="pThread">Context thread of execution</param>
 /// <param name="mod">Resulting module</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::InjectDefault(
+blackbone::call_result_t<blackbone::ModuleDataPtr> InjectionCore::InjectDefault(
     InjectContext& context, 
     const blackbone::pe::PEImage& img,
-    blackbone::Thread* pThread,
-    const blackbone::ModuleData* &mod
+    blackbone::ThreadPtr pThread /*= nullptr*/
     )
 {
     NTSTATUS status = STATUS_SUCCESS;
@@ -654,36 +668,28 @@ DWORD InjectionCore::InjectDefault(
             context.cfg.initArgs,
             code ))
         {
+            if (code == ERROR_SUCCESS)
+                code = STATUS_UNSUCCESSFUL;
+
             xlog::Error( "Failed to inject pure IL image, status: %d", code );
-            return ERROR_FUNCTION_FAILED;
+            if (NT_SUCCESS( code ))
+                code = STATUS_UNSUCCESSFUL;
+
+            return code;
         }
 
-        mod = _process.modules().GetModule( img.name(), blackbone::Sections );
-        return ERROR_SUCCESS;
-    }
-    // Inject through existing thread
-    else if (pThread != nullptr)
-    {
-        // Load 
-        auto pLoadLib = _process.modules().GetExport( _process.modules().GetModule( L"kernel32.dll" ), "LoadLibraryW" ).procAddress;
-        blackbone::RemoteFunction<decltype(&LoadLibraryW)> pfn( _process, (decltype(&LoadLibraryW))pLoadLib, img.path().c_str() );
-        
-        decltype(pfn)::ReturnType junk = 0;
-        pfn.Call( junk, pThread );
-
-        if (junk == nullptr)
-            xlog::Error( "Failed to inject image using thread hijack" );
-
-        mod = _process.modules().GetModule( const_cast<const std::wstring&>(img.path()) );
+        auto mod = _process.modules().GetModule( img.name(), blackbone::Sections );
+        return mod ? blackbone::call_result_t<blackbone::ModuleDataPtr>( mod ) 
+                   : blackbone::call_result_t<blackbone::ModuleDataPtr>( STATUS_NOT_FOUND );
     }
     else
     {
-        mod = _process.modules().Inject( img.path(), &status );
-        if (!NT_SUCCESS( status ))
-            xlog::Error( "Failed to inject image using default injection, status: 0x%X", status );
-    }
+        auto injectedMod = _process.modules().Inject( img.path(), pThread );
+        if (!injectedMod)
+            xlog::Error( "Failed to inject image using default injection, status: 0x%X", injectedMod.status );
 
-    return mod != nullptr ? ERROR_SUCCESS : status;
+        return injectedMod;
+    }
 }
 
 /// <summary>
@@ -692,7 +698,7 @@ DWORD InjectionCore::InjectDefault(
 /// <param name="context">Injection context</param>
 /// <param name="img">Target image</param>
 /// <param name="initRVA">Init function RVA</param>
-DWORD InjectionCore::InjectKernel(
+NTSTATUS InjectionCore::InjectKernel(
     InjectContext& context,
     const blackbone::pe::PEImage& img,
     uint32_t initRVA /*= 0*/
@@ -705,7 +711,7 @@ DWORD InjectionCore::InjectKernel(
             img.path(),
             (KMmapFlags)context.cfg.mmapFlags,
             initRVA,
-            context.cfg.initRoutine
+            context.cfg.initArgs
             );
     }
     else
@@ -715,7 +721,7 @@ DWORD InjectionCore::InjectKernel(
             img.path(),
             (context.cfg.injectMode == Kernel_Thread ? IT_Thread : IT_Apc),
             initRVA,
-            context.cfg.initRoutine,
+            context.cfg.initArgs,
             context.cfg.unlink,
             context.cfg.erasePE
             );
@@ -727,7 +733,7 @@ DWORD InjectionCore::InjectKernel(
 /// </summary>
 /// <param name="context">Injection context</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::MapDriver( InjectContext& context, const blackbone::pe::PEImage& img )
+NTSTATUS InjectionCore::MapDriver( InjectContext& context, const blackbone::pe::PEImage& img )
 {
     return blackbone::Driver().MMapDriver( img.path() );
 }
@@ -739,12 +745,12 @@ DWORD InjectionCore::MapDriver( InjectContext& context, const blackbone::pe::PEI
 /// <param name="mod">Target module</param>
 /// <param name="pThread">Context thread of execution</param>
 /// <returns>Error code</returns>
-DWORD InjectionCore::CallInitRoutine(
+NTSTATUS InjectionCore::CallInitRoutine(
     InjectContext& context,
     const blackbone::pe::PEImage& img,
-    const blackbone::ModuleData* mod,
+    blackbone::ModuleDataPtr mod,
     uint64_t exportRVA,
-    blackbone::Thread* pThread
+    blackbone::ThreadPtr pThread /*= nullptr*/
     )
 {
     // Call init for native image
@@ -758,22 +764,24 @@ DWORD InjectionCore::CallInitRoutine(
         if (pThread == nullptr)
         {
             auto argMem = _process.memory().Allocate( 0x1000, PAGE_READWRITE );
-            argMem.Write( 0, context.cfg.initArgs.length() * sizeof( wchar_t ) + 2, context.cfg.initArgs.c_str() );
+            if (!argMem)
+                return argMem.status;
 
-            xlog::Normal( "Initialization routine returned 0x%X", _process.remote().ExecDirect( fnPtr, argMem.ptr() ) );
+            argMem->Write( 0, context.cfg.initArgs.length() * sizeof( wchar_t ) + 2, context.cfg.initArgs.c_str() );
+            auto status = _process.remote().ExecDirect( fnPtr, argMem->ptr() );
+
+            xlog::Normal( "Initialization routine returned 0x%X", status );
         }
         // Execute in existing thread
         else
         {
-            blackbone::RemoteFunction<fnInitRoutine> pfn( _process, (fnInitRoutine)fnPtr, context.cfg.initArgs.c_str() );
+            blackbone::RemoteFunction<fnInitRoutine> pfn( _process, fnPtr );
+            auto status = pfn.Call( context.cfg.initArgs.c_str(), pThread );
 
-            int junk = 0;
-            pfn.Call( junk, pThread );
-
-            xlog::Normal( "Initialization routine returned 0x%X", junk );
+            xlog::Normal( "Initialization routine returned 0x%X", status );
         }
     }
 
-    return ERROR_SUCCESS;
+    return STATUS_SUCCESS;
 }
 

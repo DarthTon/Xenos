@@ -93,8 +93,8 @@ void ModulesDlg::RefreshList( )
     auto modsPE = _process.modules().GetAllModules( blackbone::PEHeaders );
 
     // Known manual modules
-    decltype(modsLdr) modsManual, modsAll;
-    _process.modules().GetManualModules( modsManual );
+    decltype(modsLdr) modsAll;
+    auto modsManual = _process.modules().GetManualModules( );
 
     // Gather all modules
     modsAll.insert( modsLdr.begin(), modsLdr.end() );
@@ -108,28 +108,28 @@ void ModulesDlg::RefreshList( )
         wchar_t* platfom = nullptr;
         wchar_t* detected = nullptr;
 
-        wsprintf( address, L"0x%08I64x", mod.second.baseAddress );
+        wsprintf( address, L"0x%08I64x", mod.second->baseAddress );
 
         // Module platform
-        if (mod.second.type == blackbone::mt_mod32)
+        if (mod.second->type == blackbone::mt_mod32)
             platfom = L"32 bit";
-        else if (mod.second.type == blackbone::mt_mod64)
+        else if (mod.second->type == blackbone::mt_mod64)
             platfom = L"64 bit";
         else
             platfom = L"Unknown";
 
         // Mapping type
-        if (mod.second.manual == true)
+        if (mod.second->manual == true)
             detected = L"Manual map";
         else if (modsLdr.count( mod.first ))
             detected = L"Normal";
         else if (modsSec.count( mod.first ))
             detected = L"Section only";
-        else if (mod.second.name.find( L"Unknown_0x" ) == 0)
+        else if (mod.second->name.find( L"Unknown_0x" ) == 0)
             detected = L"PE header";
         else
             detected = L"Unknown";
 
-        _modList.AddItem( mod.second.name, static_cast<LPARAM>(mod.second.baseAddress), { address, platfom, detected } );
+        _modList.AddItem( mod.second->name, static_cast<LPARAM>(mod.second->baseAddress), { address, platfom, detected } );
     }
 }
