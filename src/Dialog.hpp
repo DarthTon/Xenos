@@ -52,7 +52,7 @@ public:
         _hwnd = CreateDialogW( NULL, MAKEINTRESOURCE( _dialogID ), parent, dlgProc.GetThunk() );
         ShowWindow( _hwnd, SW_SHOW );
 
-        while (IsWindow( _hwnd ) && GetMessage( &msg, NULL, 0, 0 ))
+        while (IsWindow( _hwnd ) && GetMessageW( &msg, NULL, 0, 0 ) > 0)
         {
             if (TranslateAccelerator( _hwnd, hAccel, &msg ))
                 continue;
