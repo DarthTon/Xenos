@@ -600,7 +600,7 @@ NTSTATUS InjectionCore::InjectSingle( InjectContext& context, blackbone::pe::PEI
     if (!img.pureIL() && mod == nullptr && context.cfg.injectMode < Kernel_Thread && NT_SUCCESS( status ))
     {
         xlog::Error( "Invalid failure status: 0x%X", status );
-        status = STATUS_UNSUCCESSFUL;
+        status = STATUS_DLL_NOT_FOUND;
     }
 
     // Initialize routine
@@ -652,6 +652,8 @@ blackbone::call_result_t<blackbone::ModuleDataPtr> InjectionCore::InjectDefault(
     blackbone::ThreadPtr pThread /*= nullptr*/
     )
 {
+    using namespace blackbone;
+
     NTSTATUS status = STATUS_SUCCESS;
 
     // Pure IL image
@@ -662,25 +664,21 @@ blackbone::call_result_t<blackbone::ModuleDataPtr> InjectionCore::InjectDefault(
         xlog::Normal( "Image '%ls' is pure IL", img.path().c_str() );
 
         if (!_process.modules().InjectPureIL(
-            blackbone::ImageNET::GetImageRuntimeVer( img.path().c_str() ),
+            ImageNET::GetImageRuntimeVer( img.path().c_str() ),
             img.path(),
             context.cfg.initRoutine,
             context.cfg.initArgs,
             code ))
         {
-            if (code == ERROR_SUCCESS)
-                code = STATUS_UNSUCCESSFUL;
-
             xlog::Error( "Failed to inject pure IL image, status: %d", code );
             if (NT_SUCCESS( code ))
-                code = STATUS_UNSUCCESSFUL;
+                code = STATUS_DLL_NOT_FOUND;
 
             return code;
         }
 
-        auto mod = _process.modules().GetModule( img.name(), blackbone::Sections );
-        return mod ? blackbone::call_result_t<blackbone::ModuleDataPtr>( mod ) 
-                   : blackbone::call_result_t<blackbone::ModuleDataPtr>( STATUS_NOT_FOUND );
+        auto mod = _process.modules().GetModule( img.name(), Sections );
+        return mod ? call_result_t<ModuleDataPtr>( mod ) : call_result_t<ModuleDataPtr>( STATUS_NOT_FOUND );
     }
     else
     {
