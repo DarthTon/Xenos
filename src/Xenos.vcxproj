@@ -24,29 +24,29 @@
     <RootNamespace>
     </RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -247,14 +247,10 @@
     <Image Include="alien.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys" />
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys" />
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys" />
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys" />
-    <None Include="..\ext\BlackBone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys" />
-    <None Include="..\ext\BlackBone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys" />
-    <None Include="..\ext\BlackBone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys" />
-    <None Include="..\ext\BlackBone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys" />
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys" />
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys" />
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys" />
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ext\BlackBone\src\BlackBone\BlackBone.vcxproj">

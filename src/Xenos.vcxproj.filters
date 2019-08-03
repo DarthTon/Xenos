@@ -165,16 +165,16 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys">
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys">
       <Filter>Resources</Filter>
     </None>
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win7Release\BlackBoneDrv7.sys">
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys">
       <Filter>Resources</Filter>
     </None>
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win8Release\BlackBoneDrv8.sys">
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys">
       <Filter>Resources</Filter>
     </None>
-    <None Include="..\..\BlackBone\src\BlackBoneDrv\bin\x64\Win10Release\BlackBoneDrv10.sys">
+    <None Include="..\ext\blackbone\src\BlackBoneDrv\bin\x64\Win8.1Release\BlackBoneDrv81.sys">
       <Filter>Resources</Filter>
     </None>
   </ItemGroup>
