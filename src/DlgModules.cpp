@@ -112,23 +112,23 @@ void ModulesDlg::RefreshList( )
 
         // Module platform
         if (mod.second->type == blackbone::mt_mod32)
-            platfom = L"32 bit";
+            platfom = (wchar_t*)L"32 bit";
         else if (mod.second->type == blackbone::mt_mod64)
-            platfom = L"64 bit";
+            platfom = (wchar_t*)L"64 bit";
         else
-            platfom = L"Unknown";
+            platfom = (wchar_t*)L"Unknown";
 
         // Mapping type
         if (mod.second->manual == true)
-            detected = L"Manual map";
+            detected = (wchar_t*)L"Manual map";
         else if (modsLdr.count( mod.first ))
-            detected = L"Normal";
+            detected = (wchar_t*)L"Normal";
         else if (modsSec.count( mod.first ))
-            detected = L"Section only";
+            detected = (wchar_t*)L"Section only";
         else if (mod.second->name.find( L"Unknown_0x" ) == 0)
-            detected = L"PE header";
+            detected = (wchar_t*)L"PE header";
         else
-            detected = L"Unknown";
+            detected = (wchar_t*)L"Unknown";
 
         _modList.AddItem( mod.second->name, static_cast<LPARAM>(mod.second->baseAddress), { address, platfom, detected } );
     }
