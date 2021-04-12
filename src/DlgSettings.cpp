@@ -136,7 +136,7 @@ DWORD DlgSettings::HandleDriver( uint32_t type )
                 Wow64DisableWow64FsRedirection( &oldVal );
 
                 // For some reason running BCDedit directly does not enable test signing from WOW64 process
-                if (CreateProcessW( bcdpath.c_str(), L"/C Bcdedit.exe -set TESTSIGNING ON", NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ))
+                if (CreateProcessW( bcdpath.c_str(), (LPWSTR)L"/C Bcdedit.exe -set TESTSIGNING ON", NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ))
                 {
                     Message::ShowWarning( _hwnd, L"You must reboot your computer for the changes to take effect" );
 
